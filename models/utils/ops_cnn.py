@@ -36,24 +36,30 @@ def fc_layer(x, num_units, add_reg, layer_name):
 
 def max_pool(x, pool_size, stride, name, padding='VALID'):
     """Create a max pooling layer."""
-    return tf.layers.max_pooling2d(inputs=x, pool_size=pool_size, strides=stride,
-                                   padding=padding, name=name)
+    net = tf.layers.max_pooling2d(inputs=x, pool_size=pool_size, strides=stride,
+                                  padding=padding, name=name)
+    print('{}: {}'.format(name, net.get_shape()))
+    return net
 
 
-def avg_pool(x, pool_size, stride, name, padding='VALID'):
+def average_pool(x, pool_size, stride, name, padding='VALID'):
     """Create an average pooling layer."""
-    return tf.layers.average_pooling2d(inputs=x, pool_size=pool_size, strides=stride,
-                                       padding=padding, name=name)
+    net = tf.layers.average_pooling2d(inputs=x, pool_size=pool_size, strides=stride,
+                                      padding=padding, name=name)
+    print('{}: {}'.format(name, net.get_shape()))
+    return net
 
 
-def global_average_pool(x):
+def global_average_pool(x, name='global_avg_pooling'):
     """
     width = np.shape(x)[1]
     height = np.shape(x)[2]
     pool_size = [width, height]
     return tf.layers.average_pooling2d(inputs=x, pool_size=pool_size, strides=stride)
     """
-    return global_avg_pool(x, name='Global_avg_pooling')
+    net = global_avg_pool(x, name=name)
+    print('{}: {}'.format(name, net.get_shape()))
+    return net
 
 
 def dropout(x, rate, training):
@@ -78,7 +84,7 @@ def lrn(inputs, depth_radius=2, alpha=0.0001, beta=0.75, bias=1.0):
     return tf.nn.local_response_normalization(inputs, depth_radius=depth_radius, alpha=alpha, beta=beta, bias=bias)
 
 
-def Concatenation(layers):
+def concatenation(layers):
     return tf.concat(layers, axis=3)
 
 

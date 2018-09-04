@@ -1,21 +1,76 @@
 from base_model import BaseModel
 import tensorflow as tf
-from models.utils.cnn_ops import conv_2d, flatten_layer, fc_layer, dropout, max_pool, lrn
+from models.utils.ops_cnn import batch_normalization, relu, conv_layer, dropout, average_pool, fc_layer, max_pool, \
+    global_average_pool, flatten, concatenation
 
 
-class AlexNet(BaseModel):
+class DenseNet(BaseModel):
     def __init__(self, sess, conf):
-        super(AlexNet, self).__init__(sess, conf)
+        super(DenseNet, self).__init__(sess, conf)
+        assert self.conf.num_levels == len(self.conf.num_BBs), "number of levels doesn't match with number of blocks!"
+        self.k = conf.growth_rate
+        self.trans_out = 3 * self.k
         self.build_network(self.x)
         self.configure_network()
 
     def build_network(self, x):
         # Building network...
-        with tf.variable_scope('CapsNet'):
+        with tf.variable_scope('DenseNet'):
+            x = conv_layer(x, num_filters=2 * self.k, kernel_size=7, stride=2, layer_name='Conv0')
+            # x = max_pool(x, pool_size=3, stride=2, name='MaxPool0')
 
-            self.logits = fc_layer(net, self.conf.num_cls, 'FC_out', use_relu=False, add_reg=self.conf.L2_reg)
+            for l in range(self.conf.num_levels):
+                x = self.dense_block(input_x=x, num_BBs=self.conf.num_BBs[l], block_name='DB_' + str(l))
+                print('DB_{} shape: {}'.format(str(l + 1), x.get_shape()))
+                x = self.transition_layer(x, scope='TB_' + str(l))
+                print('TD_{} shape: {}'.format(str(l + 1), x.get_shape()))
+
+            # x = self.dense_block(input_x=x, num_BBs=32, block_name='Dense_final')
+            # print('DB_{} shape: {}'.format(str(l + 2), x.get_shape()))
+            x = batch_normalization(x, training=self.is_training, scope='linear_batch')
+            x = relu(x)
+            x = global_average_pool(x)
+            x = flatten(x)
+            self.logits = fc_layer(x, num_units=self.conf.num_cls, add_reg=self.conf.L2_reg, layer_name='Fc1')
             # [?, num_cls]
             self.probs = tf.nn.softmax(self.logits)
             # [?, num_cls]
             self.y_pred = tf.to_int32(tf.argmax(self.probs, 1))
             # [?] (predicted labels)
+
+    def bottleneck_block(self, x, scope):
+        # print(x)
+        with tf.variable_scope(scope):
+            x = batch_normalization(x, training=self.is_training, scope='BN1')
+            x = relu(x)
+            x = conv_layer(x, num_filters=4 * self.k, kernel_size=1, layer_name='CONV1')
+            x = dropout(x, rate=self.conf.dropout_rate, training=self.is_training)
+
+            x = batch_normalization(x, training=self.is_training, scope='BN2')
+            x = relu(x)
+            x = conv_layer(x, num_filters=self.k, kernel_size=3, layer_name='CONV2')
+            x = dropout(x, rate=self.conf.dropout_rate, training=self.is_training)
+            return x
+
+    def transition_layer(self, x, scope):
+        with tf.variable_scope(scope):
+            x = batch_normalization(x, training=self.is_training, scope='BN1')
+            x = relu(x)
+            x = conv_layer(x, num_filters=int(x.get_shape().as_list()[-1]*self.conf.theta),
+                           kernel_size=1, layer_name='CONV1')
+            x = dropout(x, rate=self.conf.dropout_rate, training=self.is_training)
+            x = average_pool(x, pool_size=2, stride=2, name='AVG_POOL')
+            return x
+
+    def dense_block(self, input_x, num_BBs, block_name):
+        with tf.variable_scope(block_name):
+            layers_concat = list()
+            layers_concat.append(input_x)
+            x = self.bottleneck_block(input_x, scope='BB_' + str(0))
+            layers_concat.append(x)
+            for i in range(num_BBs - 1):
+                x = concatenation(layers_concat)
+                x = self.bottleneck_block(x, scope='BB_' + str(i + 1))
+                layers_concat.append(x)
+            x = concatenation(layers_concat)
+            return x

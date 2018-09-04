@@ -13,6 +13,8 @@ elif args.model == 'alexnet':
     from models.AlexNet import AlexNet as Model
 elif args.model == 'resnet':
     from models.ResNet import ResNet as Model
+elif args.model == 'densenet':
+    from models.DenseNet import DenseNet as Model
 
 
 def main(_):

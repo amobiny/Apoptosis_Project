@@ -3,9 +3,9 @@ import tensorflow as tf
 flags = tf.app.flags
 flags.DEFINE_string('mode', 'train', 'train or test')
 flags.DEFINE_integer('step_num', 167399, 'model number to load')
-flags.DEFINE_string('model', 'original_capsule', 'alexnet, resnet, densenet, '
-                                        'original_capsule, matrix_capsule or vector_capsule')
-flags.DEFINE_string('loss_type', 'margin', 'cross_entropy, spread or margin')
+flags.DEFINE_string('model', 'densenet', 'alexnet, resnet, densenet, '
+                                                 'original_capsule, matrix_capsule or vector_capsule')
+flags.DEFINE_string('loss_type', 'cross_entropy', 'cross_entropy, spread or margin')
 flags.DEFINE_boolean('add_recon_loss', False, 'To add reconstruction loss')
 flags.DEFINE_boolean('L2_reg', False, 'Adds L2-regularization to all the network weights')
 flags.DEFINE_float('lmbda', 5e-04, 'L2-regularization coefficient')
@@ -31,7 +31,7 @@ flags.DEFINE_float('lr_min', 1e-5, 'Minimum learning rate')
 
 # data
 flags.DEFINE_string('data', 'apoptosis', 'mnist or nodule or cifar10 or apoptosis')
-flags.DEFINE_integer('N', 228000, 'Total number of training samples')
+# flags.DEFINE_integer('N', 72000, 'Total number of training samples')
 flags.DEFINE_float('percent', 1, 'Percentage of training data to use')
 flags.DEFINE_integer('dim', 2, '2D or 3D for nodule data')
 flags.DEFINE_boolean('one_hot', False, 'one-hot-encodes the labels')
@@ -53,11 +53,10 @@ flags.DEFINE_string('model_name', 'model', 'Model file name')
 # CNN architecture
 flags.DEFINE_float('dropout_rate', 0.2, 'The dropout rate, between 0 and 1. '
                                         'E.g. "rate=0.1" would drop out 10% of input units')
-flags.DEFINE_integer('growth_k', 12, 'Growth rate of DenseNet')
-
-
-
-
+flags.DEFINE_integer('growth_rate', 24, 'Growth rate of DenseNet')
+flags.DEFINE_integer('num_levels', 3, '# of levels (dense block + Transition Layer) in DenseNet')
+flags.DEFINE_list('num_BBs', [6, 8, 10], '# of bottleneck-blocks at each level')
+flags.DEFINE_float('theta', 1, 'Compression factor in DenseNet')
 
 # CapsNet architecture
 flags.DEFINE_integer('prim_caps_dim', 8, 'Dimension of the PrimaryCaps in the Original_CapsNet')
