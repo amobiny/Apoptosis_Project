@@ -37,3 +37,12 @@ def margin_loss(y, v_length, conf):
         # [?, 10]
         margin_loss = tf.reduce_mean(tf.reduce_sum(L_c, axis=1), name="margin_loss")
     return margin_loss
+
+
+def cross_entropy(y, logits):
+    try:
+        diff = tf.nn.softmax_cross_entropy_with_logits_v2(labels=y, logits=logits)
+    except:
+        diff = tf.nn.softmax_cross_entropy_with_logits(labels=y, logits=logits)
+    loss = tf.reduce_mean(diff)
+    return loss

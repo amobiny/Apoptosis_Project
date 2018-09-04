@@ -1,3 +1,13 @@
+"""
+Copyright 2017-2022 Department of Electrical and Computer Engineering
+University of Houston, TX/USA
+**********************************************************************************
+Author:   Aryan Mobiny
+Date:     9/1/2018
+Comments: Includes functions for defining the CapsNet layers
+**********************************************************************************
+"""
+
 import tensorflow as tf
 from models.utils.EM import matrix_capsules_em_routing
 import numpy as np

@@ -12,7 +12,10 @@ class DataLoader(object):
         self.augment = cfg.data_augment
         self.max_angle = cfg.max_angle
         self.batch_size = cfg.batch_size
-        self.data_path = './data/data_' + str(cfg.height) + '_' + str(cfg.percent) + '.h5'
+        if cfg.percent == 1:
+            self.data_path = './data/data_' + str(cfg.height) + '.h5'
+        else:
+            self.data_path = './data/data_' + str(cfg.height) + '_' + str(cfg.percent) + '.h5'
 
     def get_data(self, mode='train'):
         h5f = h5py.File(self.data_path, 'r')

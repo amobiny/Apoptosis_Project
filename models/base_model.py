@@ -1,7 +1,7 @@
 import tensorflow as tf
 import os
 import numpy as np
-from models.utils.loss_ops import margin_loss, spread_loss
+from models.utils.loss_ops import margin_loss, spread_loss, cross_entropy
 
 
 class BaseModel(object):
@@ -23,9 +23,10 @@ class BaseModel(object):
         with tf.name_scope('Input'):
             self.x = tf.placeholder(tf.float32, self.input_shape, name='input')
             self.y = tf.placeholder(tf.float32, self.output_shape, name='annotation')
-            self.mask_with_labels = tf.placeholder_with_default(False, shape=(), name="mask_with_labels")
+            self.keep_prob = self.conf.keep_prob
+            self.is_training = tf.placeholder_with_default(False, shape=(), name="is_training")
 
-    def mask(self):
+    def mask(self):     # used in capsule network
         with tf.variable_scope('Masking'):
             epsilon = 1e-9
             self.v_length = tf.sqrt(tf.reduce_sum(tf.square(self.digit_caps), axis=2, keep_dims=True) + epsilon)
@@ -38,7 +39,7 @@ class BaseModel(object):
             y_pred_ohe = tf.one_hot(self.y_pred, depth=self.conf.num_cls)
             # [?, 10] (one-hot-encoded predicted labels)
 
-            reconst_targets = tf.cond(self.mask_with_labels,  # condition
+            reconst_targets = tf.cond(self.is_training,  # condition
                                       lambda: self.y,  # if True (Training)
                                       lambda: y_pred_ohe,  # if False (Test)
                                       name="reconstruction_targets")
@@ -55,13 +56,16 @@ class BaseModel(object):
                 self.generate_margin()
                 loss = spread_loss(self.y, self.act, self.margin, 'spread_loss')
                 self.summary_list.append(tf.summary.scalar('spread_loss', loss))
+            elif self.conf.loss_type == 'cross_entropy':
+                loss = cross_entropy(self.y, self.logits)
+                tf.summary.scalar('cross_entropy', loss)
             if self.conf.L2_reg:
                 with tf.name_scope('l2_loss'):
                     l2_loss = tf.reduce_sum(self.conf.lmbda * tf.stack([tf.nn.l2_loss(v)
                                                                         for v in tf.get_collection('weights')]))
                     loss += l2_loss
                 self.summary_list.append(tf.summary.scalar('l2_loss', l2_loss))
-            if self.conf.add_recon_loss or self.conf.add_decoder:
+            if self.conf.add_recon_loss:
                 with tf.variable_scope('Reconstruction_Loss'):
                     orgin = tf.reshape(self.x, shape=(-1, self.conf.height * self.conf.width * self.conf.channel))
                     squared = tf.square(self.decoder_output - orgin)
@@ -70,13 +74,11 @@ class BaseModel(object):
                     self.summary_list.append(tf.summary.scalar('reconstruction_loss', self.recon_err))
                     recon_img = tf.reshape(self.decoder_output,
                                            shape=(-1, self.conf.height, self.conf.width, self.conf.channel))
+                    self.summary_list.append(tf.summary.image('reconstructed', recon_img))
+                    self.summary_list.append(tf.summary.image('original', self.x))
             else:
                 self.total_loss = loss
             self.mean_loss, self.mean_loss_op = tf.metrics.mean(self.total_loss)
-
-        if self.conf.add_recon_loss or self.conf.add_decoder:
-            self.summary_list.append(tf.summary.image('reconstructed', recon_img))
-            self.summary_list.append(tf.summary.image('original', self.x))
 
     def accuracy_func(self):
         with tf.variable_scope('Accuracy'):
@@ -186,7 +188,7 @@ class BaseModel(object):
                     start = train_step * self.conf.batch_size
                     end = (train_step + 1) * self.conf.batch_size
                     x_batch, y_batch = self.data_reader.next_batch(start, end, mode='train')
-                    feed_dict = {self.x: x_batch, self.y: y_batch, self.mask_with_labels: True}
+                    feed_dict = {self.x: x_batch, self.y: y_batch, self.is_training: True}
                     if train_step % self.conf.SUMMARY_FREQ == 0:
                         _, _, _, summary = self.sess.run([self.train_op,
                                                           self.mean_loss_op,
@@ -202,10 +204,10 @@ class BaseModel(object):
             self.data_reader.randomize()
             for train_step in range(1, self.conf.max_step + 1):
                 # print(train_step)
-                self.is_train = True
+                # self.is_train = True
                 if train_step % self.conf.SUMMARY_FREQ == 0:
                     x_batch, y_batch = self.data_reader.next_batch()
-                    feed_dict = {self.x: x_batch, self.y: y_batch, self.mask_with_labels: True}
+                    feed_dict = {self.x: x_batch, self.y: y_batch, self.is_training: True}
                     _, _, _, summary = self.sess.run([self.train_op,
                                                       self.mean_loss_op,
                                                       self.mean_accuracy_op,
@@ -215,19 +217,19 @@ class BaseModel(object):
                     print('step: {0:<6}, train_loss= {1:.4f}, train_acc={2:.01%}'.format(train_step, loss, acc))
                 else:
                     x_batch, y_batch = self.data_reader.next_batch()
-                    feed_dict = {self.x: x_batch, self.y: y_batch, self.mask_with_labels: True}
+                    feed_dict = {self.x: x_batch, self.y: y_batch, self.is_training: True}
                     self.sess.run([self.train_op, self.mean_loss_op, self.mean_accuracy_op], feed_dict=feed_dict)
                 if train_step % self.conf.VAL_FREQ == 0:
                     self.evaluate(train_step)
 
     def evaluate(self, train_step):
-        self.is_train = False
+        # self.is_train = False
         self.sess.run(tf.local_variables_initializer())
         for step in range(self.num_val_batch):
             start = step * self.conf.batch_size
             end = (step + 1) * self.conf.batch_size
             x_val, y_val = self.data_reader.next_batch(start, end, mode='valid')
-            feed_dict = {self.x: x_val, self.y: y_val, self.mask_with_labels: False}
+            feed_dict = {self.x: x_val, self.y: y_val, self.is_training: False}
             self.sess.run([self.mean_loss_op, self.mean_accuracy_op], feed_dict=feed_dict)
 
         summary_valid = self.sess.run(self.merged_summary, feed_dict=feed_dict)
@@ -258,7 +260,7 @@ class BaseModel(object):
         self.data_reader = DataLoader(self.conf)
         self.data_reader.get_data(mode='test')
         self.num_test_batch = self.data_reader.count_num_batch(self.conf.batch_size, mode='test')
-        self.is_train = False
+        # self.is_train = False
         self.sess.run(tf.local_variables_initializer())
         for step in range(self.num_test_batch):
             start = step * self.conf.batch_size
