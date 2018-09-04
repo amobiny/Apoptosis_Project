@@ -2,9 +2,9 @@ import tensorflow as tf
 
 flags = tf.app.flags
 flags.DEFINE_string('mode', 'train', 'train or test')
-flags.DEFINE_integer('step_num', 167399, 'model number to load')
+flags.DEFINE_integer('step_num', 0, 'model number to load')
 flags.DEFINE_string('model', 'densenet', 'alexnet, resnet, densenet, '
-                                                 'original_capsule, matrix_capsule or vector_capsule')
+                                         'original_capsule, matrix_capsule or vector_capsule')
 flags.DEFINE_string('loss_type', 'cross_entropy', 'cross_entropy, spread or margin')
 flags.DEFINE_boolean('add_recon_loss', False, 'To add reconstruction loss')
 flags.DEFINE_boolean('L2_reg', False, 'Adds L2-regularization to all the network weights')

@@ -20,7 +20,7 @@ def conv_layer(x, num_filters, kernel_size, add_reg=False, stride=1, layer_name=
             regularizer = tf.contrib.layers.l2_regularizer(scale=0.1)
         net = tf.layers.conv2d(inputs=x, filters=num_filters, kernel_size=kernel_size,
                                strides=stride, padding='SAME', kernel_regularizer=regularizer)
-        print('{}: {}'.format(layer_name, net.get_shape()))
+        # print('{}: {}'.format(layer_name, net.get_shape()))
         return net
 
 
@@ -38,7 +38,7 @@ def max_pool(x, pool_size, stride, name, padding='VALID'):
     """Create a max pooling layer."""
     net = tf.layers.max_pooling2d(inputs=x, pool_size=pool_size, strides=stride,
                                   padding=padding, name=name)
-    print('{}: {}'.format(name, net.get_shape()))
+    # print('{}: {}'.format(name, net.get_shape()))
     return net
 
 
@@ -46,7 +46,7 @@ def average_pool(x, pool_size, stride, name, padding='VALID'):
     """Create an average pooling layer."""
     net = tf.layers.average_pooling2d(inputs=x, pool_size=pool_size, strides=stride,
                                       padding=padding, name=name)
-    print('{}: {}'.format(name, net.get_shape()))
+    # print('{}: {}'.format(name, net.get_shape()))
     return net
 
 
@@ -75,9 +75,10 @@ def batch_normalization(x, training, scope):
                    center=True,
                    scale=True,
                    zero_debias_moving_mean=True):
-        return tf.cond(training,
-                       lambda: batch_norm(inputs=x, is_training=training, reuse=None),
-                       lambda: batch_norm(inputs=x, is_training=training, reuse=True))
+        out = tf.cond(training,
+                      lambda: batch_norm(inputs=x, is_training=training, reuse=None),
+                      lambda: batch_norm(inputs=x, is_training=training, reuse=True))
+        return out
 
 
 def lrn(inputs, depth_radius=2, alpha=0.0001, beta=0.75, bias=1.0):
