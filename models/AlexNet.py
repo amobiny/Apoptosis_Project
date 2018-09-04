@@ -1,6 +1,7 @@
 from base_model import BaseModel
 import tensorflow as tf
-from models.utils.cnn_ops import conv_2d, flatten_layer, fc_layer, dropout, max_pool, lrn
+from models.utils.ops_cnn import conv_layer, fc_layer, dropout, max_pool, lrn, relu
+from tensorflow.contrib.layers import flatten
 
 
 class AlexNet(BaseModel):
@@ -12,22 +13,25 @@ class AlexNet(BaseModel):
     def build_network(self, x):
         # Building network...
         with tf.variable_scope('CapsNet'):
-            net = conv_2d(x, 7, 2, 96, 'CONV1', add_reg=self.conf.L2_reg)
-            net = lrn(net)
-            net = max_pool(net, 3, 2, 'MaxPool1')
-            net = conv_2d(net, 5, 2, 256, 'CONV2', add_reg=self.conf.L2_reg)
-            net = lrn(net)
-            net = max_pool(net, 3, 2, 'MaxPool2')
-            net = conv_2d(net, 3, 1, 384, 'CONV3', add_reg=self.conf.L2_reg)
-            net = conv_2d(net, 3, 1, 384, 'CONV4', add_reg=self.conf.L2_reg)
-            net = conv_2d(net, 3, 1, 256, 'CONV5', add_reg=self.conf.L2_reg)
-            net = max_pool(net, 3, 2, 'MaxPool3')
-            layer_flat = flatten_layer(net)
-            net = fc_layer(layer_flat, 512, 'FC1', add_reg=self.conf.L2_reg)
-            net = dropout(net, self.conf.keep_prob)
-            net = fc_layer(net, 512, 'FC2', add_reg=self.conf.L2_reg)
-            net = dropout(net, self.conf.keep_prob)
-            self.logits = fc_layer(net, self.conf.num_cls, 'FC_out', use_relu=False, add_reg=self.conf.L2_reg)
+            net = lrn(relu(conv_layer(x, kernel_size=7, stride=2, num_filters=96,
+                                      add_reg=self.conf.L2_reg, layer_name='CONV1')))
+            net = max_pool(net, pool_size=3, stride=2, padding='SAME', name='MaxPool1')
+            net = lrn(relu(conv_layer(net, kernel_size=5, stride=2, num_filters=256,
+                                      add_reg=self.conf.L2_reg, layer_name='CONV2')))
+            net = max_pool(net, pool_size=3, stride=2, padding='SAME', name='MaxPool2')
+            net = relu(conv_layer(net, kernel_size=3, stride=1, num_filters=384,
+                                  add_reg=self.conf.L2_reg, layer_name='CONV3'))
+            net = relu(conv_layer(net, kernel_size=3, stride=1, num_filters=384,
+                                  add_reg=self.conf.L2_reg, layer_name='CONV4'))
+            net = relu(conv_layer(net, kernel_size=3, stride=1, num_filters=256,
+                                  add_reg=self.conf.L2_reg, layer_name='CONV5'))
+            net = max_pool(net, pool_size=3, stride=2, padding='SAME', name='MaxPool3')
+            layer_flat = flatten(net)
+            net = relu(fc_layer(layer_flat, num_units=512, add_reg=self.conf.L2_reg, layer_name='FC1'))
+            net = dropout(net, self.conf.dropout_rate, training=self.is_training)
+            net = relu(fc_layer(net, num_units=512, add_reg=self.conf.L2_reg, layer_name='FC2'))
+            net = dropout(net, self.conf.dropout_rate, training=self.is_training)
+            self.logits = fc_layer(net, num_units=self.conf.num_cls, add_reg=self.conf.L2_reg, layer_name='FC3')
             # [?, num_cls]
             self.probs = tf.nn.softmax(self.logits)
             # [?, num_cls]

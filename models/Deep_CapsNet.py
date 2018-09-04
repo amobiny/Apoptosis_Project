@@ -1,6 +1,6 @@
 from base_model import BaseModel
-from layers.Conv_Caps import ConvCapsuleLayer
-from layers.FC_Caps import FCCapsuleLayer
+from capsule_layers.Conv_Caps import ConvCapsuleLayer
+from capsule_layers.FC_Caps import FCCapsuleLayer
 from keras import layers
 import tensorflow as tf
 

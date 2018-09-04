@@ -23,7 +23,6 @@ class BaseModel(object):
         with tf.name_scope('Input'):
             self.x = tf.placeholder(tf.float32, self.input_shape, name='input')
             self.y = tf.placeholder(tf.float32, self.output_shape, name='annotation')
-            self.keep_prob = self.conf.keep_prob
             self.is_training = tf.placeholder_with_default(False, shape=(), name="is_training")
 
     def mask(self):     # used in capsule network

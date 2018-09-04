@@ -3,9 +3,9 @@ import tensorflow as tf
 flags = tf.app.flags
 flags.DEFINE_string('mode', 'train', 'train or test')
 flags.DEFINE_integer('step_num', 167399, 'model number to load')
-flags.DEFINE_string('model', 'alexnet', 'alexnet, resnet, densenet, '
+flags.DEFINE_string('model', 'original_capsule', 'alexnet, resnet, densenet, '
                                         'original_capsule, matrix_capsule or vector_capsule')
-flags.DEFINE_string('loss_type', 'cross_entropy', 'cross_entropy, spread or margin')
+flags.DEFINE_string('loss_type', 'margin', 'cross_entropy, spread or margin')
 flags.DEFINE_boolean('add_recon_loss', False, 'To add reconstruction loss')
 flags.DEFINE_boolean('L2_reg', False, 'Adds L2-regularization to all the network weights')
 flags.DEFINE_float('lmbda', 5e-04, 'L2-regularization coefficient')
@@ -51,7 +51,13 @@ flags.DEFINE_integer('reload_step', 0, 'Reload step to continue training')
 flags.DEFINE_string('model_name', 'model', 'Model file name')
 
 # CNN architecture
-flags.DEFINE_float('keep_prob', 0.8, 'Keeping probability of dropout layer')
+flags.DEFINE_float('dropout_rate', 0.2, 'The dropout rate, between 0 and 1. '
+                                        'E.g. "rate=0.1" would drop out 10% of input units')
+flags.DEFINE_integer('growth_k', 12, 'Growth rate of DenseNet')
+
+
+
+
 
 # CapsNet architecture
 flags.DEFINE_integer('prim_caps_dim', 8, 'Dimension of the PrimaryCaps in the Original_CapsNet')

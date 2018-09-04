@@ -2,9 +2,7 @@ from keras import initializers, layers
 import keras.backend as K
 import tensorflow as tf
 import numpy as np
-from keras.utils.conv_utils import conv_output_length
-
-from layers.ops import squash
+from models.capsule_layers.ops import squash
 
 
 class FCCapsuleLayer(layers.Layer):

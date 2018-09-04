@@ -70,5 +70,5 @@ def write_spec(args):
         config_file.write('C: ' + str(args.C) + '\n')
         config_file.write('D: ' + str(args.D) + '\n')
     elif args.model == 'alexnet':
-        config_file.write('keep_prob: ' + str(args.keep_prob))
+        config_file.write('dropout_rate: ' + str(args.dropout_rate))
     config_file.close()
