@@ -109,4 +109,5 @@ data/
 .idea/
 idea/
 Results/
+*.npy
 

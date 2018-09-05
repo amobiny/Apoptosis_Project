@@ -1,7 +1,8 @@
-from layers.FC_Caps import FCCapsuleLayer
+import tensorflow as tf
+from models.capsule_layers.FC_Caps import FCCapsuleLayer
 from keras import layers
 from models.utils.ops import *
-from layers.ops import squash
+from models.capsule_layers.ops import squash
 import numpy as np
 
 

@@ -12,25 +12,23 @@ class DataLoader(object):
         self.augment = cfg.data_augment
         self.max_angle = cfg.max_angle
         self.batch_size = cfg.batch_size
+        directory = '/4_class/data' if cfg.num_cls == 4 else '/2_class/' + cfg.cell_type
         if cfg.percent == 1:
-            self.data_path = './data/data_' + str(cfg.height) + '.h5'
+            self.data_path = './data' + directory + '_' + str(cfg.height) + '.h5'
         else:
-            self.data_path = './data/data_' + str(cfg.height) + '_' + str(cfg.percent) + '.h5'
+            self.data_path = './data' + directory + '_' + str(cfg.height) + '_' + str(cfg.percent) + '.h5'
 
     def get_data(self, mode='train'):
         h5f = h5py.File(self.data_path, 'r')
         if mode == 'train':
-            x_train = h5f['X_train'][:]
-            y_train = h5f['Y_train'][:]
-            self.x_train, self.y_train = self.preprocess(x_train, y_train)
+            self.x_train = h5f['X_train'][:]
+            self.y_train = h5f['Y_train'][:]
         elif mode == 'valid':
-            x_valid = h5f['X_test'][:]
-            y_valid = h5f['Y_test'][:]
-            self.x_valid, self.y_valid = self.preprocess(x_valid, y_valid)
+            self.x_valid = h5f['X_valid'][:]
+            self.y_valid = h5f['Y_valid'][:]
         elif mode == 'test':
-            x_test = h5f['X_test'][:]
-            y_test = h5f['Y_test'][:]
-            self.x_test, self.y_test = self.preprocess(x_test, y_test)
+            self.x_test = h5f['X_test'][:]
+            self.y_test = h5f['Y_test'][:]
         h5f.close()
 
     def next_batch(self, start=None, end=None, mode='train'):
@@ -61,17 +59,6 @@ class DataLoader(object):
         permutation = np.random.permutation(self.y_train.shape[0])
         self.x_train = self.x_train[permutation, :, :, :]
         self.y_train = self.y_train[permutation]
-
-    def preprocess(self, x, y, normalize=None, one_hot=False):
-        if normalize == 'standard':
-            self.get_stats()
-            x = (x - self.mean) / self.std
-        elif normalize == 'unity_based':
-            x /= 255.
-        x = x.reshape((-1, self.cfg.height, self.cfg.width, self.cfg.channel)).astype(np.float32)
-        if one_hot:
-            y = (np.arange(self.cfg.num_cls) == y[:, None]).astype(np.float32)
-        return x, y
 
     def get_stats(self):
         h5f = h5py.File(self.data_path, 'r')

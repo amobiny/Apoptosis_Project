@@ -32,7 +32,8 @@ class Orig_CapsNet(BaseModel):
             # [?, 10, 16]
 
             self.mask()
-            self.decoder()
+            if self.conf.add_recon_loss:
+                self.decoder()
 
     def decoder(self):
         with tf.variable_scope('Decoder'):

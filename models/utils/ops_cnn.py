@@ -20,7 +20,7 @@ def conv_layer(x, num_filters, kernel_size, add_reg=False, stride=1, layer_name=
             regularizer = tf.contrib.layers.l2_regularizer(scale=0.1)
         net = tf.layers.conv2d(inputs=x, filters=num_filters, kernel_size=kernel_size,
                                strides=stride, padding='SAME', kernel_regularizer=regularizer)
-        # print('{}: {}'.format(layer_name, net.get_shape()))
+        print('{}: {}'.format(layer_name, net.get_shape()))
         return net
 
 
