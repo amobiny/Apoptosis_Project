@@ -13,7 +13,7 @@ class AlexNet(BaseModel):
     def build_network(self, x):
         # Building network...
         with tf.variable_scope('CapsNet'):
-            net = lrn(relu(conv_layer(x, kernel_size=11, stride=2, num_filters=96,
+            net = lrn(relu(conv_layer(x, kernel_size=7, stride=2, num_filters=96,
                                       add_reg=self.conf.L2_reg, layer_name='CONV1')))
             net = max_pool(net, pool_size=3, stride=2, padding='SAME', name='MaxPool1')
             net = lrn(relu(conv_layer(net, kernel_size=5, stride=2, num_filters=256,

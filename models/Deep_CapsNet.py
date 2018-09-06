@@ -15,7 +15,7 @@ class CapsNet(BaseModel):
         # Building network...
         with tf.variable_scope('CapsNet'):
             # Layer 1: A 2D conv layer
-            conv1 = layers.Conv2D(filters=256, kernel_size=5, strides=2,
+            conv1 = layers.Conv2D(filters=128, kernel_size=5, strides=2,
                                   padding='valid', activation='relu', name='conv1')(x)
 
             # Reshape layer to be 1 capsule x caps_dim(=filters)
@@ -24,30 +24,29 @@ class CapsNet(BaseModel):
 
             # Layer 2: Convolutional Capsule
             primary_caps = ConvCapsuleLayer(kernel_size=5, num_caps=8, caps_dim=16, strides=1, padding='same',
-                                            routings=1, name='primarycaps')(conv1_reshaped)
+                                            routings=3, name='primarycaps')(conv1_reshaped)
 
             # Layer 3: Convolutional Capsule
             secondary_caps = ConvCapsuleLayer(kernel_size=5, num_caps=8, caps_dim=16, strides=2, padding='same',
-                                              routings=1, name='secondarycaps')(primary_caps)
+                                              routings=3, name='secondarycaps')(primary_caps)
             _, H, W, D, dim = secondary_caps.get_shape()
             sec_cap_reshaped = layers.Reshape((H.value * W.value * D.value, dim.value))(secondary_caps)
 
             # Layer 4: Fully-connected Capsule
             self.digit_caps = FCCapsuleLayer(num_caps=self.conf.num_cls, caps_dim=self.conf.digit_caps_dim,
-                                             routings=1, name='digitcaps')(sec_cap_reshaped)
+                                             routings=3, name='digitcaps')(sec_cap_reshaped)
             # [?, 10, 16]
 
-            self.mask()
-            self.decoder()
+            epsilon = 1e-9
+            self.v_length = tf.sqrt(tf.reduce_sum(tf.square(self.digit_caps), axis=2, keep_dims=True) + epsilon)
+            # [?, 10, 1]
+            self.act = tf.reshape(self.v_length, (self.conf.batch_size, self.conf.num_cls))
 
-    def decoder(self):
-        with tf.variable_scope('Decoder'):
-            decoder_input = tf.reshape(self.output_masked, [-1, self.conf.num_cls * self.conf.digit_caps_dim])
-            # [?, 160]
-            fc1 = tf.layers.dense(decoder_input, self.conf.h1, activation=tf.nn.relu, name="FC1")
-            # [?, 512]
-            fc2 = tf.layers.dense(fc1, self.conf.h2, activation=tf.nn.relu, name="FC2")
-            # [?, 1024]
-            self.decoder_output = tf.layers.dense(fc2, self.conf.width * self.conf.height,
-                                                  activation=tf.nn.sigmoid, name="FC3")
-            # [?, 784]
+            y_prob_argmax = tf.to_int32(tf.argmax(self.v_length, axis=1))
+            # [?, 1]
+            self.y_pred = tf.squeeze(y_prob_argmax)
+            # [?] (predicted labels)
+
+            if self.conf.add_recon_loss:
+                self.mask()
+                self.decoder()

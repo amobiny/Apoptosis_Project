@@ -7,6 +7,8 @@ if args.model == 'original_capsule':
     from models.Original_CapsNet import Orig_CapsNet as Model
 elif args.model == 'matrix_capsule':
     from models.Matrix_Capsule_EM_routing import MatrixCapsNet as Model
+elif args.model == 'fast_capsule':
+    from models.Fast_CapsNet import FastCapsNet as Model
 elif args.model == 'vector_capsule':
     from models.Deep_CapsNet import CapsNet as Model
 elif args.model == 'alexnet':
@@ -36,5 +38,5 @@ def main(_):
 
 if __name__ == '__main__':
     # configure which gpu or cpu to use
-    # os.environ['CUDA_VISIBLE_DEVICES'] = '2'
+    os.environ['CUDA_VISIBLE_DEVICES'] = '2, 3'
     tf.app.run()

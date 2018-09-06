@@ -1,6 +1,6 @@
 from base_model import BaseModel
 import tensorflow as tf
-from models.utils.ops import conv_2d, capsules_init, capsule_conv, capsule_fc
+from models.utils.ops_capsule import conv_2d, capsules_init, capsule_conv, capsule_fc
 
 
 class MatrixCapsNet(BaseModel):
@@ -47,7 +47,7 @@ class MatrixCapsNet(BaseModel):
             self.v_length = self.act
 
             self.y_pred = tf.to_int32(tf.argmax(self.act, axis=1))
-            if self.conf.add_decoder:
+            if self.conf.add_recon_loss:
                 self.decoder()
 
     def decoder(self):

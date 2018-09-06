@@ -31,18 +31,17 @@ class Orig_CapsNet(BaseModel):
                                              routings=3, name='digit_caps')(caps1_output)
             # [?, 10, 16]
 
-            self.mask()
+            epsilon = 1e-9
+            self.v_length = tf.sqrt(tf.reduce_sum(tf.square(self.digit_caps), axis=2, keep_dims=True) + epsilon)
+            # [?, 10, 1]
+            self.act = tf.reshape(self.v_length, (self.conf.batch_size, self.conf.num_cls))
+
+            y_prob_argmax = tf.to_int32(tf.argmax(self.v_length, axis=1))
+            # [?, 1]
+            self.y_pred = tf.squeeze(y_prob_argmax)
+            # [?] (predicted labels)
+
             if self.conf.add_recon_loss:
+                self.mask()
                 self.decoder()
 
-    def decoder(self):
-        with tf.variable_scope('Decoder'):
-            decoder_input = tf.reshape(self.output_masked, [-1, self.conf.num_cls * self.conf.digit_caps_dim])
-            # [?, 160]
-            fc1 = tf.layers.dense(decoder_input, self.conf.h1, activation=tf.nn.relu, name="FC1")
-            # [?, 512]
-            fc2 = tf.layers.dense(fc1, self.conf.h2, activation=tf.nn.relu, name="FC2")
-            # [?, 1024]
-            self.decoder_output = tf.layers.dense(fc2, self.conf.width * self.conf.height * self.conf.channel,
-                                                  activation=tf.nn.sigmoid, name="FC3")
-            # [?, 784]

@@ -10,10 +10,7 @@ class BaseModel(object):
         self.sess = sess
         self.conf = conf
         self.summary_list = []
-        if self.conf.dim == 2:
-            self.input_shape = [self.conf.batch_size, self.conf.height, self.conf.width, self.conf.channel]
-        else:
-            self.input_shape = [self.conf.batch_size, self.conf.height, self.conf.width, self.conf.channel]
+        self.input_shape = [self.conf.batch_size, self.conf.height, self.conf.width, self.conf.channel]
 
         self.output_shape = [self.conf.batch_size, self.conf.num_cls]
         self.create_placeholders()
@@ -28,14 +25,6 @@ class BaseModel(object):
 
     def mask(self):     # used in capsule network
         with tf.variable_scope('Masking'):
-            epsilon = 1e-9
-            self.v_length = tf.sqrt(tf.reduce_sum(tf.square(self.digit_caps), axis=2, keep_dims=True) + epsilon)
-            # [?, 10, 1]
-
-            y_prob_argmax = tf.to_int32(tf.argmax(self.v_length, axis=1))
-            # [?, 1]
-            self.y_pred = tf.squeeze(y_prob_argmax)
-            # [?] (predicted labels)
             y_pred_ohe = tf.one_hot(self.y_pred, depth=self.conf.num_cls)
             # [?, 10] (one-hot-encoded predicted labels)
 
@@ -46,6 +35,18 @@ class BaseModel(object):
             # [?, 10]
             self.output_masked = tf.multiply(self.digit_caps, tf.expand_dims(reconst_targets, -1))
             # [?, 10, 16]
+
+    def decoder(self):
+        with tf.variable_scope('Decoder'):
+            decoder_input = tf.reshape(self.output_masked, [-1, self.conf.num_cls * self.conf.digit_caps_dim])
+            # [?, 160]
+            fc1 = tf.layers.dense(decoder_input, self.conf.h1, activation=tf.nn.relu, name="FC1")
+            # [?, 512]
+            fc2 = tf.layers.dense(fc1, self.conf.h2, activation=tf.nn.relu, name="FC2")
+            # [?, 1024]
+            self.decoder_output = tf.layers.dense(fc2, self.conf.width * self.conf.height * self.conf.channel,
+                                                  activation=tf.nn.sigmoid, name="FC3")
+            # [?, 784]
 
     def loss_func(self):
         with tf.variable_scope('Loss'):
