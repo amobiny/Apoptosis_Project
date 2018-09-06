@@ -15,7 +15,7 @@ class CapsNet(BaseModel):
         # Building network...
         with tf.variable_scope('CapsNet'):
             # Layer 1: A 2D conv layer
-            conv1 = layers.Conv2D(filters=128, kernel_size=5, strides=2,
+            conv1 = layers.Conv2D(filters=256, kernel_size=5, strides=2,
                                   padding='valid', activation='relu', name='conv1')(x)
 
             # Reshape layer to be 1 capsule x caps_dim(=filters)

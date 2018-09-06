@@ -1,5 +1,6 @@
 import random
 import scipy
+from tensorflow.examples.tutorials.mnist import input_data
 import numpy as np
 import h5py
 
@@ -11,11 +12,10 @@ class DataLoader(object):
         self.augment = cfg.data_augment
         self.max_angle = cfg.max_angle
         self.batch_size = cfg.batch_size
-        directory = '/4_class/data' if cfg.num_cls == 4 else '/2_class/' + cfg.cell_type
         if cfg.percent == 1:
-            self.data_path = './data' + directory + '_' + str(cfg.height) + '.h5'
+            self.data_path = './data/data_' + str(cfg.height) + '.h5'
         else:
-            self.data_path = './data' + directory + '_' + str(cfg.height) + '_' + str(cfg.percent) + '.h5'
+            self.data_path = './data/data_' + str(cfg.height) + '_' + str(cfg.percent) + '.h5'
 
     def get_data(self, mode='train'):
         h5f = h5py.File(self.data_path, 'r')
@@ -23,8 +23,8 @@ class DataLoader(object):
             self.x_train = h5f['X_train'][:]
             self.y_train = h5f['Y_train'][:]
         elif mode == 'valid':
-            self.x_valid = h5f['X_valid'][:]
-            self.y_valid = h5f['Y_valid'][:]
+            self.x_valid = h5f['X_test'][:]
+            self.y_valid = h5f['Y_test'][:]
         elif mode == 'test':
             self.x_test = h5f['X_test'][:]
             self.y_test = h5f['Y_test'][:]
