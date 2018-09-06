@@ -2,6 +2,7 @@ import tensorflow as tf
 import os
 import numpy as np
 from models.utils.loss_ops import margin_loss, spread_loss, cross_entropy
+from sklearn.metrics import confusion_matrix
 
 
 class BaseModel(object):
@@ -224,13 +225,14 @@ class BaseModel(object):
     def evaluate(self, train_step):
         # self.is_train = False
         self.sess.run(tf.local_variables_initializer())
+        y_pred = np.zeros((self.data_reader.y_valid.shape[0]))
         for step in range(self.num_val_batch):
             start = step * self.conf.batch_size
             end = (step + 1) * self.conf.batch_size
             x_val, y_val = self.data_reader.next_batch(start, end, mode='valid')
             feed_dict = {self.x: x_val, self.y: y_val, self.is_training: False}
-            self.sess.run([self.mean_loss_op, self.mean_accuracy_op], feed_dict=feed_dict)
-
+            yp, _, _ = self.sess.run([self.y_pred, self.mean_loss_op, self.mean_accuracy_op], feed_dict=feed_dict)
+            y_pred[start:end] = yp
         summary_valid = self.sess.run(self.merged_summary, feed_dict=feed_dict)
         valid_loss, valid_acc = self.sess.run([self.mean_loss, self.mean_accuracy])
         self.save_summary(summary_valid, train_step + self.conf.reload_step, mode='valid')
@@ -240,9 +242,11 @@ class BaseModel(object):
             self.save(train_step + self.conf.reload_step)
         else:
             improved_str = ''
+
         print('-' * 25 + 'Validation' + '-' * 25)
         print('After {0} training step: val_loss= {1:.4f}, val_acc={2:.01%}{3}'
               .format(train_step, valid_loss, valid_acc, improved_str))
+        print(confusion_matrix(np.argmax(self.data_reader.y_valid, axis=1), y_pred))
         print('-' * 60)
 
     def test(self, step_num):
@@ -261,15 +265,18 @@ class BaseModel(object):
         self.num_test_batch = self.data_reader.count_num_batch(self.conf.batch_size, mode='test')
         # self.is_train = False
         self.sess.run(tf.local_variables_initializer())
+        y_pred = np.zeros((self.data_reader.y_test.shape[0]))
         for step in range(self.num_test_batch):
             start = step * self.conf.batch_size
             end = (step + 1) * self.conf.batch_size
             x_test, y_test = self.data_reader.next_batch(start, end, mode='test')
-            feed_dict = {self.x: x_test, self.y: y_test, self.mask_with_labels: False}
-            self.sess.run([self.mean_loss_op, self.mean_accuracy_op], feed_dict=feed_dict)
+            feed_dict = {self.x: x_test, self.y: y_test, self.is_training: False}
+            yp, _, _ = self.sess.run([self.y_pred, self.mean_loss_op, self.mean_accuracy_op], feed_dict=feed_dict)
+            y_pred[start:end] = yp
         test_loss, test_acc = self.sess.run([self.mean_loss, self.mean_accuracy])
         print('-' * 18 + 'Test Completed' + '-' * 18)
         print('test_loss= {0:.4f}, test_acc={1:.01%}'.format(test_loss, test_acc))
+        print(confusion_matrix(np.argmax(self.data_reader.y_test, axis=1), y_pred))
         print('-' * 50)
 
     def save(self, step):

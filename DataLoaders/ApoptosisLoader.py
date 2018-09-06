@@ -1,6 +1,5 @@
 import random
 import scipy
-from tensorflow.examples.tutorials.mnist import input_data
 import numpy as np
 import h5py
 

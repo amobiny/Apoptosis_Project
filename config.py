@@ -2,11 +2,11 @@ import tensorflow as tf
 
 flags = tf.app.flags
 flags.DEFINE_string('mode', 'train', 'train or test')
-flags.DEFINE_integer('step_num', 0, 'model number to load')
-flags.DEFINE_string('model', 'original_capsule', 'alexnet, resnet, densenet, '
+flags.DEFINE_integer('step_num', 134999, 'model number to load')
+flags.DEFINE_string('model', 'alexnet', 'alexnet, resnet, densenet, '
                                                  'original_capsule, matrix_capsule or vector_capsule')
-flags.DEFINE_string('loss_type', 'margin', 'cross_entropy, spread or margin')
-flags.DEFINE_boolean('add_recon_loss', True, 'To add reconstruction loss')
+flags.DEFINE_string('loss_type', 'cross_entropy', 'cross_entropy, spread or margin')
+flags.DEFINE_boolean('add_recon_loss', False, 'To add reconstruction loss')
 flags.DEFINE_boolean('L2_reg', False, 'Adds L2-regularization to all the network weights')
 flags.DEFINE_float('lmbda', 5e-04, 'L2-regularization coefficient')
 
@@ -25,15 +25,15 @@ flags.DEFINE_float('lambda_val', 0.5, 'Down-weighting parameter for the absent c
 # For reconstruction loss
 flags.DEFINE_float('alpha', 0.0005, 'Regularization coefficient to scale down the reconstruction loss')
 # For training
-flags.DEFINE_integer('batch_size', 32, 'training batch size')
+flags.DEFINE_integer('batch_size', 100, 'training batch size')
 flags.DEFINE_float('init_lr', 1e-4, 'Initial learning rate')
 flags.DEFINE_float('lr_min', 1e-5, 'Minimum learning rate')
 
 # data
 flags.DEFINE_string('data', 'apoptosis', 'mnist or nodule or cifar10 or apoptosis')
-flags.DEFINE_integer('num_cls', 4, 'Number of output classes')
+flags.DEFINE_integer('num_cls', 2, 'Number of output classes')
 flags.DEFINE_string('cell_type', 'target', 'target of effector; used in 2 class mode')
-flags.DEFINE_integer('N', 114000, 'Total number of training samples')
+flags.DEFINE_integer('N', 144000, 'Total number of training samples')
 flags.DEFINE_float('percent', 1, 'Percentage of training data to use')
 flags.DEFINE_integer('dim', 2, '2D or 3D for nodule data')
 flags.DEFINE_boolean('one_hot', False, 'one-hot-encodes the labels')
@@ -45,7 +45,7 @@ flags.DEFINE_integer('depth', 32, 'Network input depth size (in the case of 3D i
 flags.DEFINE_integer('channel', 1, 'Network input channel size')
 
 # Directories
-flags.DEFINE_string('run_name', 'run04', 'Run name')
+flags.DEFINE_string('run_name', 'run06', 'Run name')
 flags.DEFINE_string('logdir', './Results/log_dir/', 'Logs directory')
 flags.DEFINE_string('modeldir', './Results/model_dir/', 'Saved models directory')
 flags.DEFINE_integer('reload_step', 0, 'Reload step to continue training')
