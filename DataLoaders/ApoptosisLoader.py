@@ -20,8 +20,12 @@ class DataLoader(object):
     def get_data(self, mode='train'):
         h5f = h5py.File(self.data_path, 'r')
         if mode == 'train':
-            self.x_train = h5f['X_train'][:]
-            self.y_train = h5f['Y_train'][:]
+            x_train = h5f['X_train'][:]
+            y_train = h5f['Y_train'][:]
+            if self.cfg.flip:
+                self.x_train, self.y_train = flip_aug(x_train, y_train)
+            else:
+                self.x_train, self.y_train = x_train, y_train
         elif mode == 'valid':
             self.x_valid = h5f['X_test'][:]
             self.y_valid = h5f['Y_test'][:]
@@ -85,3 +89,14 @@ def random_rotation_2d(batch, max_angle):
         else:
             batch_rot[i] = batch[i]
     return batch_rot.reshape(size)
+
+
+def flip_aug(x, y):
+    x_90, x_180, x_270 = np.zeros_like(x), np.zeros_like(x), np.zeros_like(x)
+    for i in range(x.shape[0]):
+        x_90[i] = scipy.ndimage.interpolation.rotate(np.squeeze(x[i]), 90).reshape(x.shape[1:])
+        x_180[i] = scipy.ndimage.interpolation.rotate(np.squeeze(x[i]), 180).reshape(x.shape[1:])
+        x_270[i] = scipy.ndimage.interpolation.rotate(np.squeeze(x[i]), 270).reshape(x.shape[1:])
+    x_new = np.concatenate((x, x_90, x_180, x_270), axis=0)
+    y_new = np.concatenate((y, y, y, y), axis=0)
+    return x_new, y_new

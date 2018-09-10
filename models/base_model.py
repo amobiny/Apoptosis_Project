@@ -205,7 +205,6 @@ class BaseModel(object):
             self.data_reader.randomize()
             for train_step in range(1, self.conf.max_step + 1):
                 # print(train_step)
-                # self.is_train = True
                 if train_step % self.conf.SUMMARY_FREQ == 0:
                     x_batch, y_batch = self.data_reader.next_batch()
                     feed_dict = {self.x: x_batch, self.y: y_batch, self.is_training: True}
@@ -224,7 +223,6 @@ class BaseModel(object):
                     self.evaluate(train_step)
 
     def evaluate(self, train_step):
-        # self.is_train = False
         self.sess.run(tf.local_variables_initializer())
         y_pred = np.zeros((self.data_reader.y_valid.shape[0]))
         for step in range(self.num_val_batch):
@@ -264,7 +262,7 @@ class BaseModel(object):
         self.data_reader = DataLoader(self.conf)
         self.data_reader.get_data(mode='test')
         self.num_test_batch = self.data_reader.count_num_batch(self.conf.batch_size, mode='test')
-        # self.is_train = False
+        self.is_train = False
         self.sess.run(tf.local_variables_initializer())
         y_pred = np.zeros((self.data_reader.y_test.shape[0]))
         for step in range(self.num_test_batch):

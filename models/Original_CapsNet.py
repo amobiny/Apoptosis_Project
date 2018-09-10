@@ -40,6 +40,7 @@ class Orig_CapsNet(BaseModel):
             # [?, 1]
             self.y_pred = tf.squeeze(y_prob_argmax)
             # [?] (predicted labels)
+            self.features = self.digit_caps
 
             if self.conf.add_recon_loss:
                 self.mask()

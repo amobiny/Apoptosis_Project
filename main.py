@@ -20,10 +20,10 @@ elif args.model == 'densenet':
 
 
 def main(_):
-    if args.mode not in ['train', 'test']:
+    if args.mode not in ['train', 'train_sequence', 'test']:
         print('invalid mode: ', args.mode)
         print("Please input a mode: train or test")
-    else:
+    elif args.mode == 'train' or args.mode == 'test':
         model = Model(tf.Session(), args)
         if not os.path.exists(args.modeldir+args.run_name):
             os.makedirs(args.modeldir+args.run_name)
@@ -34,9 +34,12 @@ def main(_):
             model.train()
         elif args.mode == 'test':
             model.test(args.step_num)
+    elif args.mode == 'train_sequence':
+        from models.Recurrent_Network import RecNet
+        RecNet(tf.Session(), args, Model)
 
 
 if __name__ == '__main__':
     # configure which gpu or cpu to use
-    os.environ['CUDA_VISIBLE_DEVICES'] = '2, 3'
+    os.environ['CUDA_VISIBLE_DEVICES'] = '0'
     tf.app.run()

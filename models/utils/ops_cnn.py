@@ -38,7 +38,7 @@ def max_pool(x, pool_size, stride, name, padding='VALID'):
     """Create a max pooling layer."""
     net = tf.layers.max_pooling2d(inputs=x, pool_size=pool_size, strides=stride,
                                   padding=padding, name=name)
-    # print('{}: {}'.format(name, net.get_shape()))
+    print('{}: {}'.format(name, net.get_shape()))
     return net
 
 
@@ -46,7 +46,7 @@ def average_pool(x, pool_size, stride, name, padding='VALID'):
     """Create an average pooling layer."""
     net = tf.layers.average_pooling2d(inputs=x, pool_size=pool_size, strides=stride,
                                       padding=padding, name=name)
-    # print('{}: {}'.format(name, net.get_shape()))
+    print('{}: {}'.format(name, net.get_shape()))
     return net
 
 

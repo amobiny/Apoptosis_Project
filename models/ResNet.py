@@ -12,7 +12,7 @@ class ResNet(BaseModel):
         BottleneckGroup = namedtuple('BottleneckGroup',
                                      ['num_blocks', 'bottleneck_size', 'out_filters'])
         self.groups = [BottleneckGroup(3, 32, 128), BottleneckGroup(4, 64, 256),
-                       BottleneckGroup(6, 128, 512), BottleneckGroup(3, 256, 1024)]
+                       BottleneckGroup(6, 128, 512), BottleneckGroup(3, 256, 512)]
         self.build_network(self.x)
         self.configure_network()
 
@@ -33,6 +33,7 @@ class ResNet(BaseModel):
 
             net = global_average_pool(net)
             net = flatten(net)
+            self.features = net
             self.logits = fc_layer(net, num_units=self.conf.num_cls, add_reg=self.conf.L2_reg, layer_name='Fc1')
             # [?, num_cls]
             self.probs = tf.nn.softmax(self.logits)

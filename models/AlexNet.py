@@ -31,6 +31,7 @@ class AlexNet(BaseModel):
             net = dropout(net, self.conf.dropout_rate, training=self.is_training)
             net = relu(fc_layer(net, num_units=512, add_reg=self.conf.L2_reg, layer_name='FC2'))
             net = dropout(net, self.conf.dropout_rate, training=self.is_training)
+            self.features = net
             self.logits = fc_layer(net, num_units=self.conf.num_cls, add_reg=self.conf.L2_reg, layer_name='FC3')
             # [?, num_cls]
             self.probs = tf.nn.softmax(self.logits)

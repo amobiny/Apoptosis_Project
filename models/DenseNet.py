@@ -31,6 +31,7 @@ class DenseNet(BaseModel):
             net = relu(net)
             net = global_average_pool(net)
             net = flatten(net)
+            self.features = net
             self.logits = fc_layer(net, num_units=self.conf.num_cls, add_reg=self.conf.L2_reg, layer_name='Fc1')
             # [?, num_cls]
             self.probs = tf.nn.softmax(self.logits)
