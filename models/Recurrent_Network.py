@@ -11,6 +11,7 @@ class RecNet(object):
         self.biases = bias_variable(shape=[self.conf.num_cls])
         self.y = tf.placeholder(tf.float32, [None, self.conf.max_time, self.conf.num_cls])
         self.seqLen = tf.placeholder(tf.int32, [None])
+        self.build()
 
     def build(self):
         features = self.feature_extractor.features
@@ -29,7 +30,6 @@ class RecNet(object):
         return out
 
 
-# weight and bais wrappers
 def weight_variable(shape):
     """
     Create a weight variable with appropriate initialization
