@@ -16,9 +16,10 @@ class BaseModel(object):
         else:
             self.input_shape = [conf.batch_size*conf.max_time, self.conf.height, self.conf.width, self.conf.channel]
             self.output_shape = [conf.batch_size*conf.max_time, self.conf.num_cls]
+            self.global_step = tf.get_variable('global_step', [], initializer=tf.constant_initializer(0),
+                                               trainable=False)
         self.create_placeholders()
-        self.global_step = tf.get_variable('global_step', [], initializer=tf.constant_initializer(0),
-                                           trainable=False)
+
 
     def create_placeholders(self):
         with tf.name_scope('Input'):
@@ -43,12 +44,12 @@ class BaseModel(object):
         with tf.variable_scope('Decoder'):
             decoder_input = tf.reshape(self.output_masked, [-1, self.conf.num_cls * self.conf.digit_caps_dim])
             # [?, 160]
-            fc1 = tf.layers.dense(decoder_input, self.conf.h1, activation=tf.nn.relu, name="FC1")
+            fc1 = tf.layers.dense(decoder_input, self.conf.h1, activation=tf.nn.relu, name="FC1", trainable=self.conf.trainable)
             # [?, 512]
-            fc2 = tf.layers.dense(fc1, self.conf.h2, activation=tf.nn.relu, name="FC2")
+            fc2 = tf.layers.dense(fc1, self.conf.h2, activation=tf.nn.relu, name="FC2", trainable=self.conf.trainable)
             # [?, 1024]
             self.decoder_output = tf.layers.dense(fc2, self.conf.width * self.conf.height * self.conf.channel,
-                                                  activation=tf.nn.sigmoid, name="FC3")
+                                                  activation=tf.nn.sigmoid, name="FC3", trainable=self.conf.trainable)
             # [?, 784]
 
     def loss_func(self):

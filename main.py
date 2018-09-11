@@ -34,9 +34,15 @@ def main(_):
             model.train()
         elif args.mode == 'test':
             model.test(args.step_num)
-    elif args.mode == 'train_sequence':
+    elif args.mode == 'train_sequence' or args.mode == 'test_sequence':
         from models.Recurrent_Network import RecNet
-        RecNet(tf.Session(), args, Model)
+        model = RecNet(tf.Session(), args, Model)
+        if not os.path.exists(args.rnn_modeldir+args.rnn_run_name):
+            os.makedirs(args.rnn_modeldir+args.rnn_run_name)
+        if not os.path.exists(args.rnn_logdir+args.rnn_run_name):
+            os.makedirs(args.rnn_logdir+args.rnn_run_name)
+        if args.mode == 'train_sequence':
+            model.train()
 
 
 if __name__ == '__main__':

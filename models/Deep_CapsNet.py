@@ -28,7 +28,7 @@ class CapsNet(BaseModel):
 
             # Layer 3: Convolutional Capsule
             secondary_caps = ConvCapsuleLayer(kernel_size=5, num_caps=8, caps_dim=16, strides=2, padding='same',
-                                              routings=3, name='secondarycaps')(primary_caps)
+                                              trainable=self.conf.trainable, routings=3, name='secondarycaps')(primary_caps)
             _, H, W, D, dim = secondary_caps.get_shape()
             sec_cap_reshaped = layers.Reshape((H.value * W.value * D.value, dim.value))(secondary_caps)
 

@@ -13,23 +13,23 @@ from tensorflow.contrib.framework import arg_scope
 from tensorflow.contrib.layers import batch_norm, flatten
 
 
-def conv_layer(x, num_filters, kernel_size, add_reg=False, stride=1, layer_name="conv"):
+def conv_layer(x, num_filters, kernel_size, add_reg=False, stride=1, layer_name="conv", trainable=True):
     with tf.name_scope(layer_name):
         regularizer = None
         if add_reg:
             regularizer = tf.contrib.layers.l2_regularizer(scale=0.1)
-        net = tf.layers.conv2d(inputs=x, filters=num_filters, kernel_size=kernel_size,
+        net = tf.layers.conv2d(inputs=x, filters=num_filters, kernel_size=kernel_size, trainable=trainable,
                                strides=stride, padding='SAME', kernel_regularizer=regularizer)
         print('{}: {}'.format(layer_name, net.get_shape()))
         return net
 
 
-def fc_layer(x, num_units, add_reg, layer_name):
+def fc_layer(x, num_units, add_reg, layer_name, trainable=True):
     with tf.name_scope(layer_name):
         regularizer = None
         if add_reg:
             regularizer = tf.contrib.layers.l2_regularizer(scale=0.1)
-        net = tf.layers.dense(inputs=x, units=num_units, kernel_regularizer=regularizer)
+        net = tf.layers.dense(inputs=x, units=num_units, kernel_regularizer=regularizer, trainable=trainable)
         print('{}: {}'.format(layer_name, net.get_shape()))
         return net
 

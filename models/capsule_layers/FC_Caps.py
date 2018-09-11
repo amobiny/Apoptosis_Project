@@ -6,10 +6,11 @@ from models.capsule_layers.ops import squash
 
 
 class FCCapsuleLayer(layers.Layer):
-    def __init__(self, num_caps, caps_dim, routings=3,
+    def __init__(self, num_caps, caps_dim, routings=3, trainable=True,
                  kernel_initializer='he_normal', **kwargs):
         super(FCCapsuleLayer, self).__init__(**kwargs)
         self.num_caps = num_caps
+        self.trainable = trainable
         self.caps_dim = caps_dim
         self.routings = routings
         self.kernel_initializer = initializers.get(kernel_initializer)
@@ -22,6 +23,7 @@ class FCCapsuleLayer(layers.Layer):
         # Transform matrix
         self.W = self.add_weight(shape=[self.num_caps, self.num_in_caps,
                                         self.caps_dim, self.in_caps_dim],
+                                 trainable=self.trainable,
                                  initializer=self.kernel_initializer,
                                  name='W')
         self.built = True
