@@ -12,9 +12,10 @@ class BaseModel(object):
         self.summary_list = []
         if self.conf.mode != 'train_sequence':
             self.input_shape = [conf.batch_size, conf.height, conf.width, conf.channel]
+            self.output_shape = [self.conf.batch_size, self.conf.num_cls]
         else:
             self.input_shape = [conf.batch_size*conf.max_time, self.conf.height, self.conf.width, self.conf.channel]
-        self.output_shape = [self.conf.batch_size, self.conf.num_cls]
+            self.output_shape = [conf.batch_size*conf.max_time, self.conf.num_cls]
         self.create_placeholders()
         self.global_step = tf.get_variable('global_step', [], initializer=tf.constant_initializer(0),
                                            trainable=False)

@@ -1,7 +1,7 @@
 import tensorflow as tf
 
 flags = tf.app.flags
-flags.DEFINE_string('mode', 'train', 'train, train_sequence or test')
+flags.DEFINE_string('mode', 'train_sequence', 'train, train_sequence or test')
 flags.DEFINE_integer('step_num', 0, 'model number to load')
 flags.DEFINE_string('model', 'original_capsule', 'alexnet, resnet, densenet, original_capsule, '
                                                  'fast_capsule, matrix_capsule or vector_capsule')
@@ -33,7 +33,7 @@ flags.DEFINE_float('lr_min', 1e-5, 'Minimum learning rate')
 flags.DEFINE_string('data', 'apoptosis', 'mnist or nodule or cifar10 or apoptosis')
 flags.DEFINE_integer('num_cls', 2, 'Number of output classes')
 flags.DEFINE_integer('N', 72000, 'Total number of training samples')
-flags.DEFINE_float('percent', 0.7, 'Percentage of training data to use')
+flags.DEFINE_float('percent', 0.4, 'Percentage of training data to use')
 flags.DEFINE_integer('dim', 2, '2D or 3D for nodule data')
 flags.DEFINE_boolean('one_hot', False, 'one-hot-encodes the labels')
 flags.DEFINE_boolean('data_augment', True, 'Adds augmentation to data')
@@ -45,10 +45,10 @@ flags.DEFINE_integer('depth', 32, 'Network input depth size (in the case of 3D i
 flags.DEFINE_integer('channel', 1, 'Network input channel size')
 
 # Directories
-flags.DEFINE_string('run_name', 'orig_0.7', 'Run name')
+flags.DEFINE_string('run_name', 'orig_0.4', 'Run name')
 flags.DEFINE_string('logdir', './Results/log_dir/', 'Logs directory')
 flags.DEFINE_string('modeldir', './Results/model_dir/', 'Saved models directory')
-flags.DEFINE_integer('reload_step', 0, 'Reload step to continue training')
+flags.DEFINE_integer('reload_step', 61199, 'Reload step to continue training')
 flags.DEFINE_string('model_name', 'model', 'Model file name')
 
 # CNN architecture
@@ -79,7 +79,7 @@ flags.DEFINE_integer('D', 8, 'D in Figure 1 of the paper')
 # RNN architecture
 flags.DEFINE_boolean('trainable', True, 'Whether to train the CNN or not')
 flags.DEFINE_string('recurrent_model', 'LSTM', 'RNN, LSTM, BiRNN, and MANN')
-flags.DEFINE_integer('num_hidden_units', 200, 'Number of hidden units for the Recurrent structure')
+flags.DEFINE_integer('num_hidden', 200, 'Number of hidden units for the Recurrent structure')
 flags.DEFINE_integer('max_time', 72, 'Maximum length of sequences')
 
 args = tf.app.flags.FLAGS

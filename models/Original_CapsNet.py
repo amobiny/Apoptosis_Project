@@ -34,7 +34,7 @@ class Orig_CapsNet(BaseModel):
             epsilon = 1e-9
             self.v_length = tf.sqrt(tf.reduce_sum(tf.square(self.digit_caps), axis=2, keep_dims=True) + epsilon)
             # [?, 10, 1]
-            self.act = tf.reshape(self.v_length, (self.conf.batch_size, self.conf.num_cls))
+            self.act = tf.reshape(self.v_length, (-1, self.conf.num_cls))
 
             y_prob_argmax = tf.to_int32(tf.argmax(self.v_length, axis=1))
             # [?, 1]
