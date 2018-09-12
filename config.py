@@ -1,9 +1,9 @@
 import tensorflow as tf
 
 flags = tf.app.flags
-flags.DEFINE_string('mode', 'train_sequence', 'train, train_sequence or test')
-flags.DEFINE_integer('step_num', 0, 'model number to load')
-flags.DEFINE_string('model', 'alexnet', 'alexnet, resnet, densenet, original_capsule, '
+flags.DEFINE_string('mode', 'train_sequence', 'train, train_sequence, test or get_features')
+flags.DEFINE_integer('step_num', 33749, 'model number to load')
+flags.DEFINE_string('model', 'original_capsule', 'alexnet, resnet, densenet, original_capsule, '
                                                  'fast_capsule, matrix_capsule or vector_capsule')
 flags.DEFINE_string('loss_type', 'cross_entropy', 'cross_entropy, spread or margin')
 flags.DEFINE_boolean('add_recon_loss', False, 'To add reconstruction loss')
@@ -25,7 +25,7 @@ flags.DEFINE_float('lambda_val', 0.5, 'Down-weighting parameter for the absent c
 # For reconstruction loss
 flags.DEFINE_float('alpha', 0.0005, 'Regularization coefficient to scale down the reconstruction loss')
 # For training
-flags.DEFINE_integer('batch_size', 32, 'training batch size')
+flags.DEFINE_integer('batch_size', 4, 'training batch size')
 flags.DEFINE_float('init_lr', 1e-4, 'Initial learning rate')
 flags.DEFINE_float('lr_min', 1e-5, 'Minimum learning rate')
 
@@ -36,7 +36,7 @@ flags.DEFINE_integer('N', 72000, 'Total number of training samples')
 flags.DEFINE_float('percent', 1, 'Percentage of training data to use')
 flags.DEFINE_integer('dim', 2, '2D or 3D for nodule data')
 flags.DEFINE_boolean('one_hot', False, 'one-hot-encodes the labels')
-flags.DEFINE_boolean('data_augment', True, 'Adds augmentation to data')
+flags.DEFINE_boolean('data_augment', False, 'Adds augmentation to data')
 flags.DEFINE_boolean('flip', False, 'Flips the data left to right and side to side')
 flags.DEFINE_integer('max_angle', 180, 'Maximum rotation angle along each axis; when applying augmentation')
 flags.DEFINE_integer('height', 28, 'Network input height size')
@@ -79,7 +79,7 @@ flags.DEFINE_integer('D', 8, 'D in Figure 1 of the paper')
 # RNN architecture
 flags.DEFINE_boolean('trainable', False, 'Whether to train the CNN or not')
 flags.DEFINE_string('recurrent_model', 'LSTM', 'RNN, LSTM, BiRNN, and MANN')
-flags.DEFINE_integer('num_hidden', 200, 'Number of hidden units for the Recurrent structure')
+flags.DEFINE_integer('num_hidden', 1000, 'Number of hidden units for the Recurrent structure')
 flags.DEFINE_integer('max_time', 72, 'Maximum length of sequences')
 
 flags.DEFINE_string('rnn_run_name', 'test_0', 'Run name')

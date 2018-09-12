@@ -9,7 +9,8 @@ class Orig_CapsNet(BaseModel):
     def __init__(self, sess, conf):
         super(Orig_CapsNet, self).__init__(sess, conf)
         self.build_network(self.x)
-        self.configure_network()
+        if self.conf.mode != 'train_sequence':
+            self.configure_network()
 
     def build_network(self, x):
         # Building network...
@@ -45,3 +46,6 @@ class Orig_CapsNet(BaseModel):
             if self.conf.add_recon_loss:
                 self.mask()
                 self.decoder()
+
+            if self.conf.mode == 'train_sequence':
+                self.saver = tf.train.Saver(var_list=tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='CapsNet'))

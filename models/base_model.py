@@ -10,14 +10,14 @@ class BaseModel(object):
         self.sess = sess
         self.conf = conf
         self.summary_list = []
-        if self.conf.mode != 'train_sequence':
+        if self.conf.mode != 'train_sequence' and self.conf.mode != 'get_features':
             self.input_shape = [conf.batch_size, conf.height, conf.width, conf.channel]
             self.output_shape = [self.conf.batch_size, self.conf.num_cls]
         else:
             self.input_shape = [conf.batch_size*conf.max_time, self.conf.height, self.conf.width, self.conf.channel]
             self.output_shape = [conf.batch_size*conf.max_time, self.conf.num_cls]
-            self.global_step = tf.get_variable('global_step', [], initializer=tf.constant_initializer(0),
-                                               trainable=False)
+        self.global_step = tf.get_variable('global_step', [], initializer=tf.constant_initializer(0),
+                                           trainable=False)
         self.create_placeholders()
 
 
@@ -274,13 +274,77 @@ class BaseModel(object):
             end = (step + 1) * self.conf.batch_size
             x_test, y_test = self.data_reader.next_batch(start, end, mode='test')
             feed_dict = {self.x: x_test, self.y: y_test, self.is_training: False}
-            yp, _, _ = self.sess.run([self.y_pred, self.mean_loss_op, self.mean_accuracy_op], feed_dict=feed_dict)
+            yp, _, _ = self.sess.run([self.y_pred, self.mean_loss_op, self.mean_accuracy_op],
+                                     feed_dict=feed_dict)
             y_pred[start:end] = yp
         test_loss, test_acc = self.sess.run([self.mean_loss, self.mean_accuracy])
         print('-' * 18 + 'Test Completed' + '-' * 18)
         print('test_loss= {0:.4f}, test_acc={1:.01%}'.format(test_loss, test_acc))
         print(confusion_matrix(np.argmax(self.data_reader.y_test, axis=1), y_pred))
         print('-' * 50)
+
+    def get_features(self, step_num):
+        self.sess.run(tf.local_variables_initializer())
+        self.reload(step_num)
+        from DataLoaders.Sequential_ApoptosisLoader import DataLoader
+        self.data_reader = DataLoader(self.conf)
+        self.data_reader.get_data(mode='train')
+        self.data_reader.get_data(mode='test')
+        self.num_train_batch = self.data_reader.count_num_batch(self.conf.batch_size, mode='train')
+        self.num_test_batch = self.data_reader.count_num_batch(self.conf.batch_size, mode='test')
+        self.is_train = False
+
+        self.sess.run(tf.local_variables_initializer())
+        y_pred = np.zeros((self.data_reader.y_test.shape[0])*self.conf.max_time)
+        features = np.zeros((self.data_reader.y_test.shape[0]*self.conf.max_time, 512))
+        for step in range(self.num_test_batch):
+            start = step * self.conf.batch_size
+            end = (step + 1) * self.conf.batch_size
+            x_test, y_test = self.data_reader.next_batch(start, end, mode='test')
+            feed_dict = {self.x: x_test, self.y: y_test, self.is_training: False}
+            yp, feats, _, _ = self.sess.run([self.y_pred, self.features, self.mean_loss_op, self.mean_accuracy_op],
+                                     feed_dict=feed_dict)
+            y_pred[start*self.conf.max_time:end*self.conf.max_time] = yp
+            features[start*self.conf.max_time:end*self.conf.max_time] = feats
+        test_features = np.reshape(features, [-1, self.conf.max_time, 512])
+        test_loss, test_acc = self.sess.run([self.mean_loss, self.mean_accuracy])
+        print('-' * 18 + 'Test Completed' + '-' * 18)
+        print('test_loss= {0:.4f}, test_acc={1:.01%}'.format(test_loss, test_acc))
+        y_true = np.reshape(np.argmax(self.data_reader.y_test, axis=-1), [-1])
+        print(confusion_matrix(y_true, y_pred))
+        print('-' * 50)
+
+        self.sess.run(tf.local_variables_initializer())
+        y_pred = np.zeros((self.data_reader.y_train.shape[0])*self.conf.max_time)
+        features = np.zeros((self.data_reader.y_train.shape[0]*self.conf.max_time, 512))
+        for step in range(self.num_test_batch):
+            start = step * self.conf.batch_size
+            end = (step + 1) * self.conf.batch_size
+            x_train, y_train = self.data_reader.next_batch(start, end, mode='train')
+            feed_dict = {self.x: x_train, self.y: y_train, self.is_training: False}
+            yp, feats, _, _ = self.sess.run([self.y_pred, self.features, self.mean_loss_op, self.mean_accuracy_op],
+                                     feed_dict=feed_dict)
+            y_pred[start*self.conf.max_time:end*self.conf.max_time] = yp
+            features[start*self.conf.max_time:end*self.conf.max_time] = feats
+        train_features = np.reshape(features, [-1, self.conf.max_time, 512])
+        train_loss, train_acc = self.sess.run([self.mean_loss, self.mean_accuracy])
+        print('-' * 18 + 'Test Completed' + '-' * 18)
+        print('test_loss= {0:.4f}, test_acc={1:.01%}'.format(train_loss, train_acc))
+        y_true = np.reshape(np.argmax(self.data_reader.y_train, axis=-1), [-1])
+        print(confusion_matrix(y_true, y_pred))
+        print('-' * 50)
+        import h5py
+        data_dir = '/home/cougarnet.uh.edu/amobiny/Desktop/Apoptosis_Project/data/'
+        h5f = h5py.File(data_dir + 'features.h5', 'w')
+        h5f.create_dataset('X_train', data=train_features)
+        h5f.create_dataset('Y_train', data=self.data_reader.y_train)
+        h5f.create_dataset('X_valid', data=test_features)
+        h5f.create_dataset('Y_valid', data=self.data_reader.y_test)
+        h5f.create_dataset('X_test', data=test_features)
+        h5f.create_dataset('Y_test', data=self.data_reader.y_test)
+        h5f.close()
+
+
 
     def save(self, step):
         print('----> Saving the model at step #{0}'.format(step))
@@ -293,6 +357,6 @@ class BaseModel(object):
         if not os.path.exists(model_path + '.meta'):
             print('----> No such checkpoint found', model_path)
             return
-        print('----> Restoring the model...')
+        print('----> Restoring the CNN model...')
         self.saver.restore(self.sess, model_path)
-        print('----> Model successfully restored')
+        print('----> CNN Model successfully restored')
