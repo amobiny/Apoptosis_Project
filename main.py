@@ -33,12 +33,14 @@ def main(_):
             write_spec(args)
             model.train()
         elif args.mode == 'test':
-            model.test(args.step_num)
+            model.test(args.reload_step)
         elif args.mode == 'get_features':
             model.get_features(args.step_num)
     elif args.mode == 'train_sequence' or args.mode == 'test_sequence':
+        session = tf.Session()
+        CNN_Model = Model(session, args)
         from models.Recurrent_Network import RecNet
-        model = RecNet(tf.Session(), args, Model)
+        model = RecNet(session, args, CNN_Model)
         if not os.path.exists(args.rnn_modeldir+args.rnn_run_name):
             os.makedirs(args.rnn_modeldir+args.rnn_run_name)
         if not os.path.exists(args.rnn_logdir+args.rnn_run_name):
@@ -49,5 +51,5 @@ def main(_):
 
 if __name__ == '__main__':
     # configure which gpu or cpu to use
-    os.environ['CUDA_VISIBLE_DEVICES'] = '3'
+    os.environ['CUDA_VISIBLE_DEVICES'] = '2'
     tf.app.run()

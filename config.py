@@ -1,12 +1,15 @@
 import tensorflow as tf
 
+# reload_step: alexnet: 33749, resnet: 123749, original_capsule: 1583999, vector_capsule: 2964599
+
 flags = tf.app.flags
 flags.DEFINE_string('mode', 'train_sequence', 'train, train_sequence, test or get_features')
-flags.DEFINE_integer('step_num', 33749, 'model number to load')
+flags.DEFINE_integer('reload_step', 1583999, 'model number to load (either for testing or continue training)')
+flags.DEFINE_string('run_name', 'orig_1', 'Run name')
 flags.DEFINE_string('model', 'original_capsule', 'alexnet, resnet, densenet, original_capsule, '
                                                  'fast_capsule, matrix_capsule or vector_capsule')
 flags.DEFINE_string('loss_type', 'cross_entropy', 'cross_entropy, spread or margin')
-flags.DEFINE_boolean('add_recon_loss', False, 'To add reconstruction loss')
+flags.DEFINE_boolean('add_recon_loss', True, 'To add reconstruction loss')
 flags.DEFINE_boolean('L2_reg', False, 'Adds L2-regularization to all the network weights')
 flags.DEFINE_float('lmbda', 5e-04, 'L2-regularization coefficient')
 
@@ -45,10 +48,8 @@ flags.DEFINE_integer('depth', 32, 'Network input depth size (in the case of 3D i
 flags.DEFINE_integer('channel', 1, 'Network input channel size')
 
 # Directories
-flags.DEFINE_string('run_name', 'alex_1', 'Run name')
 flags.DEFINE_string('logdir', './Results/log_dir/', 'Logs directory')
 flags.DEFINE_string('modeldir', './Results/model_dir/', 'Saved models directory')
-flags.DEFINE_integer('reload_step', 33749, 'Reload step to continue training')
 flags.DEFINE_string('model_name', 'model', 'Model file name')
 
 # CNN architecture
@@ -78,9 +79,12 @@ flags.DEFINE_integer('D', 8, 'D in Figure 1 of the paper')
 
 # RNN architecture
 flags.DEFINE_boolean('trainable', False, 'Whether to train the CNN or not')
-flags.DEFINE_string('recurrent_model', 'LSTM', 'RNN, LSTM, BiRNN, and MANN')
-flags.DEFINE_integer('num_hidden', 1000, 'Number of hidden units for the Recurrent structure')
+flags.DEFINE_string('recurrent_model', 'BiLSTM', 'RNN, LSTM, BiLSTM, and MANN')
+flags.DEFINE_integer('num_hidden', 100, 'Number of hidden units for the Recurrent structure')
+flags.DEFINE_integer('num_layers', 1, 'Number of rnn layers')
 flags.DEFINE_integer('max_time', 72, 'Maximum length of sequences')
+
+flags.DEFINE_boolean('before_mask', True, 'Decide to get the features before or after mask')
 
 flags.DEFINE_string('rnn_run_name', 'test_0', 'Run name')
 flags.DEFINE_string('rnn_logdir', './Results_recurrent/log_dir/', 'Logs directory')

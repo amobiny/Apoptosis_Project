@@ -41,11 +41,15 @@ class Orig_CapsNet(BaseModel):
             # [?, 1]
             self.y_pred = tf.squeeze(y_prob_argmax)
             # [?] (predicted labels)
-            self.features = self.digit_caps
 
             if self.conf.add_recon_loss:
                 self.mask()
                 self.decoder()
 
-            if self.conf.mode == 'train_sequence':
-                self.saver = tf.train.Saver(var_list=tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='CapsNet'))
+            # if self.conf.mode == 'train_sequence':
+            #     self.saver = tf.train.Saver(var_list=tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='CapsNet'))
+
+            if self.conf.before_mask:
+                self.features = self.digit_caps
+            else:
+                self.features = self.output_masked

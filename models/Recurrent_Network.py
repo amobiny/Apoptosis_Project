@@ -7,52 +7,67 @@ import os
 
 
 class RecNet(object):
-    def __init__(self, sess, conf, model):
+    def __init__(self, sess, conf, cnn_model):
         self.sess = sess
         self.conf = conf
-        self.feature_extractor = model(tf.Session(), conf)
-        # self.y = tf.reshape(self.feature_extractor.y, [-1, conf.max_time, conf.num_cls])
-        self.output_shape = [conf.batch_size * conf.max_time, self.conf.num_cls]
-        self.y = tf.placeholder(tf.float32, self.output_shape, name='annotation')
-        self.seqLen = tf.placeholder(tf.int32, [None])
+        self.feature_extractor = cnn_model
+        self.seqLen = tf.placeholder(tf.int32, [self.conf.batch_size])
+        self.features = tf.reshape(self.feature_extractor.features, [conf.batch_size, conf.max_time, 32])
         self.summary_list = []
         self.build()
         self.configure_summary()
 
     def build(self):
         with tf.variable_scope('RecNet'):
-            self.weights = weight_variable(shape=[self.conf.num_hidden, self.conf.num_cls])
-            self.biases = bias_variable(shape=[self.conf.num_cls])
-        features = self.feature_extractor.features
-        num_features = features.get_shape().as_list()[-1]
-        x = tf.reshape(features, [self.conf.batch_size, self.conf.max_time, num_features])
-        if self.conf.recurrent_model == 'RNN':
-            cell = rnn.BasicRNNCell(self.conf.num_hidden)
-            outputs, states = tf.nn.dynamic_rnn(cell, x, sequence_length=self.seqLen, dtype=tf.float32)
-        elif self.conf.recurrent_model == 'LSTM':
-            cell = rnn.BasicLSTMCell(self.conf.num_hidden)
-            outputs, states = tf.nn.dynamic_rnn(cell, x, sequence_length=self.seqLen, dtype=tf.float32)
-        batch_size = tf.shape(x)[0]
-        w_repeated = tf.tile(tf.expand_dims(self.weights, 0), [batch_size, 1, 1])
-        self.logits = tf.reshape(tf.matmul(outputs, w_repeated) + self.biases,
-                                 [self.conf.batch_size * self.conf.max_time, self.conf.num_cls])
-        self.y_pred = tf.argmax(self.logits, axis=-1, name='predictions')
-        loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(labels=self.y,
-                                                                         logits=self.logits), name='loss')
+            print('*'*20)
+            if self.conf.recurrent_model == 'RNN':
+                print('RNN with {} layers and {} hidden units generated'.
+                      format(self.conf.num_layers, self.conf.num_hidden))
+                cell = rnn.BasicRNNCell(self.conf.num_hidden)
+                outputs, states = tf.nn.dynamic_rnn(cell, self.features, sequence_length=self.seqLen, dtype=tf.float32)
+                weights = weight_variable(shape=[self.conf.num_hidden, self.conf.num_cls])
+                biases = bias_variable(shape=[self.conf.num_cls])
+            elif self.conf.recurrent_model == 'LSTM':
+                print('LSTM with {} layers and {} hidden units generated'.
+                      format(self.conf.num_layers, self.conf.num_hidden))
+                outputs = lstm(self.features, self.conf.num_layers, self.conf.num_hidden, self.conf.dropout_rate)
+                # cell = rnn.BasicLSTMCell(self.conf.num_hidden)
+                # cell = tf.contrib.rnn.MultiRNNCell([cell for _ in range(self.conf.num_layers)])
+                # cell = tf.nn.rnn_cell.MultiRNNCell([cell] * self.conf.num_layers)
+                # outputs, states = tf.nn.dynamic_rnn(cell, self.features, sequence_length=self.seqLen, dtype=tf.float32)
+                weights = weight_variable(shape=[self.conf.num_hidden, self.conf.num_cls])
+                biases = bias_variable(shape=[self.conf.num_cls])
+            elif self.conf.recurrent_model == 'BiLSTM':
+                print('Bidirectional LSTM with {} layers and {} hidden units generated'.
+                      format(self.conf.num_layers, self.conf.num_hidden))
+                outputs = bidirectional_lstm(self.features, self.conf.num_layers,
+                                             self.conf.num_hidden, self.conf.dropout_rate)
+                weights = weight_variable(shape=[2*self.conf.num_hidden, self.conf.num_cls])
+                biases = bias_variable(shape=[self.conf.num_cls])
+        print('*' * 20)
+        w_repeated = tf.tile(tf.expand_dims(weights, 0), [self.conf.batch_size, 1, 1])
+        logits = tf.reshape(tf.matmul(outputs, w_repeated) + biases,
+                            [self.conf.batch_size * self.conf.max_time, self.conf.num_cls])
+        self.y_pred_tensor = tf.argmax(logits, axis=-1, name='predictions')
+        labels = tf.reshape(self.feature_extractor.y, [self.conf.batch_size * self.conf.max_time, self.conf.num_cls])
+        loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(labels=labels,
+                                                                         logits=logits), name='loss')
         self.mean_loss, self.mean_loss_op = tf.metrics.mean(loss)
 
         optimizer = tf.train.AdamOptimizer(learning_rate=0.001, name='Adam-op')
-        # if not self.conf.trainable:
-        #     train_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, "rnn") + \
-        #                  tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, "RecNet")
-        # else:
         train_vars = tf.trainable_variables()
         self.train_op = optimizer.minimize(loss, var_list=train_vars)
 
-        correct_prediction = tf.equal(self.y_pred, tf.argmax(self.y, 1), name='correct_pred')
+        correct_prediction = tf.equal(self.y_pred_tensor, tf.argmax(labels, -1), name='correct_pred')
         accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32), name='accuracy')
         self.mean_accuracy, self.mean_accuracy_op = tf.metrics.mean(accuracy)
-        self.saver = tf.train.Saver(var_list=train_vars, max_to_keep=1000)
+
+        scope = 'CapsNet'
+        # if self.conf.trainable:
+        trained_vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope=scope)[:11]  #############
+        # AlexNet: 16, ResNet: 426, CapsNet: 11,
+        self.cnn_saver = tf.train.Saver(var_list=trained_vars, max_to_keep=1000)
+        self.rnn_saver = tf.train.Saver(var_list=tf.trainable_variables(), max_to_keep=1000)
 
     def configure_summary(self):
         self.train_writer = tf.summary.FileWriter(self.conf.rnn_logdir + self.conf.rnn_run_name + '/train/',
@@ -73,7 +88,7 @@ class RecNet(object):
     def train(self):
         self.sess.run(tf.local_variables_initializer())
         self.sess.run(tf.global_variables_initializer())
-        self.feature_extractor.reload(self.conf.reload_step)
+        self.reload_cnn()
         self.best_validation_accuracy = 0
         self.data_reader = DataLoader(self.conf)
         self.data_reader.get_data(mode='train')
@@ -87,8 +102,8 @@ class RecNet(object):
                 start = train_step * self.conf.batch_size
                 end = (train_step + 1) * self.conf.batch_size
                 x_batch, y_batch = self.data_reader.next_batch(start, end, mode='train')
-                feed_dict = {self.feature_extractor.x: x_batch, self.y: y_batch,
-                             self.feature_extractor.is_training: self.conf.trainable,
+                feed_dict = {self.feature_extractor.x: x_batch, self.feature_extractor.y: y_batch,
+                             self.feature_extractor.is_training: True,
                              self.seqLen: self.conf.max_time * np.ones(self.conf.batch_size)}
                 if train_step % self.conf.SUMMARY_FREQ == 0:
                     _, _, _, summary = self.sess.run([self.train_op,
@@ -109,10 +124,11 @@ class RecNet(object):
             start = step * self.conf.batch_size
             end = (step + 1) * self.conf.batch_size
             x_val, y_val = self.data_reader.next_batch(start, end, mode='valid')
-            feed_dict = {self.feature_extractor.x: x_val, self.y: y_val,
+            feed_dict = {self.feature_extractor.x: x_val, self.feature_extractor.y: y_val,
                          self.feature_extractor.is_training: False,
                          self.seqLen: self.conf.max_time * np.ones(self.conf.batch_size)}
-            yp, _, _ = self.sess.run([self.y_pred, self.mean_loss_op, self.mean_accuracy_op], feed_dict=feed_dict)
+            yp, _, _ = self.sess.run([self.y_pred_tensor, self.mean_loss_op, self.mean_accuracy_op],
+                                     feed_dict=feed_dict)
             y_pred[start * self.conf.max_time:end * self.conf.max_time] = yp
         summary_valid = self.sess.run(self.merged_summary, feed_dict=feed_dict)
         valid_loss, valid_acc = self.sess.run([self.mean_loss, self.mean_accuracy])
@@ -143,7 +159,7 @@ class RecNet(object):
             start = step * self.conf.batch_size
             end = (step + 1) * self.conf.batch_size
             x_test, y_test = self.data_reader.next_batch(start, end, mode='test')
-            feed_dict = {self.x: x_test, self.y: y_test, self.is_training: False}
+            feed_dict = {self.x: x_test, self.y: y_test, self.feature_extractor.is_training: False}
             yp, _, _ = self.sess.run([self.y_pred, self.mean_loss_op, self.mean_accuracy_op], feed_dict=feed_dict)
             y_pred[start:end] = yp
         test_loss, test_acc = self.sess.run([self.mean_loss, self.mean_accuracy])
@@ -155,7 +171,7 @@ class RecNet(object):
     def save(self, step):
         print('----> Saving the model at step #{0}'.format(step))
         checkpoint_path = os.path.join(self.conf.rnn_modeldir + self.conf.rnn_run_name, self.conf.rnn_model_name)
-        self.saver.save(self.sess, checkpoint_path, global_step=step)
+        self.rnn_saver.save(self.sess, checkpoint_path, global_step=step)
 
     def reload(self, step):
         checkpoint_path = os.path.join(self.conf.rnn_modeldir + self.conf.rnn_run_name, self.conf.rnn_model_name)
@@ -166,6 +182,16 @@ class RecNet(object):
         print('----> Restoring the model...')
         self.saver.restore(self.sess, model_path)
         print('----> Model successfully restored')
+
+    def reload_cnn(self):
+        checkpoint_path = os.path.join(self.conf.modeldir + self.conf.run_name, self.conf.model_name)
+        model_path = checkpoint_path + '-' + str(self.conf.reload_step)
+        if not os.path.exists(model_path + '.meta'):
+            print('----> No such checkpoint found', model_path)
+            return
+        print('----> Restoring the CNN model...')
+        self.cnn_saver.restore(self.sess, model_path)
+        print('----> CNN Model successfully restored')
 
 
 def weight_variable(shape):
@@ -191,3 +217,30 @@ def bias_variable(shape):
     return tf.get_variable('b',
                            dtype=tf.float32,
                            initializer=initer)
+
+
+def bidirectional_lstm(input_data, num_layers, rnn_size, keep_prob):
+    output = input_data
+    for layer in range(num_layers):
+        with tf.variable_scope('encoder_{}'.format(layer), reuse=tf.AUTO_REUSE):
+            cell_fw = tf.contrib.rnn.LSTMCell(rnn_size, initializer=tf.truncated_normal_initializer(-0.1, 0.1, seed=2))
+            # cell_fw = tf.contrib.rnn.DropoutWrapper(cell_fw, input_keep_prob=keep_prob)
+            cell_bw = tf.contrib.rnn.LSTMCell(rnn_size, initializer=tf.truncated_normal_initializer(-0.1, 0.1, seed=2))
+            # cell_bw = rnn.DropoutWrapper(cell_bw, input_keep_prob=keep_prob)
+            outputs, states = tf.nn.bidirectional_dynamic_rnn(cell_fw,
+                                                              cell_bw,
+                                                              output,
+                                                              dtype=tf.float32)
+            output = tf.concat(outputs, 2)
+    return output
+
+
+def lstm(input_data, num_layers, rnn_size, keep_prob):
+    output = input_data
+    for layer in range(num_layers):
+        with tf.variable_scope('encoder_{}'.format(layer), reuse=tf.AUTO_REUSE):
+            # cell = tf.contrib.rnn.LSTMCell(rnn_size, initializer=tf.truncated_normal_initializer(-0.1, 0.1, seed=2))
+            cell = tf.contrib.rnn.LSTMCell(rnn_size)
+            # cell = rnn.DropoutWrapper(cell, input_keep_prob=keep_prob)
+            output, _ = tf.nn.dynamic_rnn(cell, output, dtype=tf.float32)
+    return output

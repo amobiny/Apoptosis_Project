@@ -13,11 +13,12 @@ class BaseModel(object):
         if self.conf.mode != 'train_sequence' and self.conf.mode != 'get_features':
             self.input_shape = [conf.batch_size, conf.height, conf.width, conf.channel]
             self.output_shape = [self.conf.batch_size, self.conf.num_cls]
+            self.global_step = tf.get_variable('global_step', [], initializer=tf.constant_initializer(0),
+                                               trainable=False)
         else:
             self.input_shape = [conf.batch_size*conf.max_time, self.conf.height, self.conf.width, self.conf.channel]
             self.output_shape = [conf.batch_size*conf.max_time, self.conf.num_cls]
-        self.global_step = tf.get_variable('global_step', [], initializer=tf.constant_initializer(0),
-                                           trainable=False)
+
         self.create_placeholders()
 
 
@@ -38,7 +39,7 @@ class BaseModel(object):
                                       name="reconstruction_targets")
             # [?, 10]
             self.output_masked = tf.multiply(self.digit_caps, tf.expand_dims(reconst_targets, -1))
-            # [?, 10, 16]
+            # [?, 2, 16]
 
     def decoder(self):
         with tf.variable_scope('Decoder'):

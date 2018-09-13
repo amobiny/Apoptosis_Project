@@ -9,7 +9,8 @@ class CapsNet(BaseModel):
     def __init__(self, sess, conf):
         super(CapsNet, self).__init__(sess, conf)
         self.build_network(self.x)
-        self.configure_network()
+        if self.conf.mode != 'train_sequence':
+            self.configure_network()
 
     def build_network(self, x):
         # Building network...
@@ -46,8 +47,12 @@ class CapsNet(BaseModel):
             # [?, 1]
             self.y_pred = tf.squeeze(y_prob_argmax)
             # [?] (predicted labels)
-            self.features = self.digit_caps
 
             if self.conf.add_recon_loss:
                 self.mask()
                 self.decoder()
+
+            if self.conf.before_mask:
+                self.features = self.digit_caps
+            else:
+                self.features = self.output_masked

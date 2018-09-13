@@ -42,5 +42,4 @@ class AlexNet(BaseModel):
             # [?, num_cls]
             self.y_pred = tf.to_int32(tf.argmax(self.probs, 1))
             # [?] (predicted labels)
-            if self.conf.mode == 'train_sequence':
-                self.saver = tf.train.Saver(var_list=tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='CapsNet'))
+

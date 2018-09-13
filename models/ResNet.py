@@ -14,7 +14,8 @@ class ResNet(BaseModel):
         self.groups = [BottleneckGroup(3, 32, 128), BottleneckGroup(4, 64, 256),
                        BottleneckGroup(6, 128, 512), BottleneckGroup(3, 256, 512)]
         self.build_network(self.x)
-        self.configure_network()
+        if self.conf.mode != 'train_sequence':
+            self.configure_network()
 
     def build_network(self, x):
         # Building network...

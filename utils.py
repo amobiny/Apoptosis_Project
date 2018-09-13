@@ -1,3 +1,5 @@
+import tensorflow as tf
+
 
 def write_spec(args):
     config_file = open(args.modeldir + args.run_name + '/config.txt', 'w')
@@ -28,3 +30,28 @@ def write_spec(args):
     elif args.model == 'alexnet':
         config_file.write('dropout_rate: ' + str(args.dropout_rate))
     config_file.close()
+
+
+def weight_variable(shape):
+    """
+    Create a weight variable with appropriate initialization
+    :param shape: weight shape
+    :return: initialized weight variable
+    """
+    initer = tf.truncated_normal_initializer(stddev=0.01)
+    return tf.get_variable('W',
+                           dtype=tf.float32,
+                           shape=shape,
+                           initializer=initer)
+
+
+def bias_variable(shape):
+    """
+    Create a bias variable with appropriate initialization
+    :param shape: bias variable shape
+    :return: initialized bias variable
+    """
+    initer = tf.constant(0., shape=shape, dtype=tf.float32)
+    return tf.get_variable('b',
+                           dtype=tf.float32,
+                           initializer=initer)
