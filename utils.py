@@ -2,7 +2,10 @@ import tensorflow as tf
 
 
 def write_spec(args):
-    config_file = open(args.modeldir + args.run_name + '/config.txt', 'w')
+    if args.add_rnn:
+        config_file = open(args.rnn_modeldir + args.rnn_run_name + '/config.txt', 'w')
+    else:
+        config_file = open(args.modeldir + args.run_name + '/config.txt', 'w')
     config_file.write('run_name: ' + args.run_name + '\n')
     config_file.write('model: ' + args.model + '\n')
     config_file.write('loss_type: ' + args.loss_type + '\n')
@@ -29,6 +32,12 @@ def write_spec(args):
         config_file.write('D: ' + str(args.D) + '\n')
     elif args.model == 'alexnet':
         config_file.write('dropout_rate: ' + str(args.dropout_rate))
+    if args.add_rnn:
+        config_file.write('trainable: ' + str(args.trainable) + '\n')
+        config_file.write('recurrent_model: ' + args.recurrent_model + '\n')
+        config_file.write('num layers: ' + str(args.num_layers) + '\n')
+        config_file.write('num hidden: ' + str(args.num_hidden) + '\n')
+        config_file.write('rnn_run_name: ' + args.rnn_run_name + '\n')
     config_file.close()
 
 

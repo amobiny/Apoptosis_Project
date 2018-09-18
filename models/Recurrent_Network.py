@@ -35,14 +35,14 @@ class RecNet(object):
                 # cell = tf.contrib.rnn.MultiRNNCell([cell for _ in range(self.conf.num_layers)])
                 # cell = tf.nn.rnn_cell.MultiRNNCell([cell] * self.conf.num_layers)
                 # outputs, states = tf.nn.dynamic_rnn(cell, self.features, sequence_length=self.seqLen, dtype=tf.float32)
-                weights = weight_variable(shape=[self.conf.num_hidden, self.conf.num_cls])
+                weights = weight_variable(shape=[self.conf.num_hidden[-1], self.conf.num_cls])
                 biases = bias_variable(shape=[self.conf.num_cls])
             elif self.conf.recurrent_model == 'BiLSTM':
                 print('Bidirectional LSTM with {} layers and {} hidden units generated'.
                       format(self.conf.num_layers, self.conf.num_hidden))
                 outputs = bidirectional_lstm(self.features, self.conf.num_layers,
                                              self.conf.num_hidden, self.conf.dropout_rate)
-                weights = weight_variable(shape=[2*self.conf.num_hidden, self.conf.num_cls])
+                weights = weight_variable(shape=[2*self.conf.num_hidden[-1], self.conf.num_cls])
                 biases = bias_variable(shape=[self.conf.num_cls])
         print('*' * 20)
         w_repeated = tf.tile(tf.expand_dims(weights, 0), [self.conf.batch_size, 1, 1])
@@ -223,9 +223,9 @@ def bidirectional_lstm(input_data, num_layers, rnn_size, keep_prob):
     output = input_data
     for layer in range(num_layers):
         with tf.variable_scope('encoder_{}'.format(layer), reuse=tf.AUTO_REUSE):
-            cell_fw = tf.contrib.rnn.LSTMCell(rnn_size, initializer=tf.truncated_normal_initializer(-0.1, 0.1, seed=2))
+            cell_fw = tf.contrib.rnn.LSTMCell(rnn_size[layer], initializer=tf.truncated_normal_initializer(-0.1, 0.1, seed=2))
             # cell_fw = tf.contrib.rnn.DropoutWrapper(cell_fw, input_keep_prob=keep_prob)
-            cell_bw = tf.contrib.rnn.LSTMCell(rnn_size, initializer=tf.truncated_normal_initializer(-0.1, 0.1, seed=2))
+            cell_bw = tf.contrib.rnn.LSTMCell(rnn_size[layer], initializer=tf.truncated_normal_initializer(-0.1, 0.1, seed=2))
             # cell_bw = rnn.DropoutWrapper(cell_bw, input_keep_prob=keep_prob)
             outputs, states = tf.nn.bidirectional_dynamic_rnn(cell_fw,
                                                               cell_bw,
@@ -240,7 +240,7 @@ def lstm(input_data, num_layers, rnn_size, keep_prob):
     for layer in range(num_layers):
         with tf.variable_scope('encoder_{}'.format(layer), reuse=tf.AUTO_REUSE):
             # cell = tf.contrib.rnn.LSTMCell(rnn_size, initializer=tf.truncated_normal_initializer(-0.1, 0.1, seed=2))
-            cell = tf.contrib.rnn.LSTMCell(rnn_size)
+            cell = tf.contrib.rnn.LSTMCell(rnn_size[layer])
             # cell = rnn.DropoutWrapper(cell, input_keep_prob=keep_prob)
             output, _ = tf.nn.dynamic_rnn(cell, output, dtype=tf.float32)
     return output

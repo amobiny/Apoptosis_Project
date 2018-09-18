@@ -46,10 +46,11 @@ def main(_):
         if not os.path.exists(args.rnn_logdir+args.rnn_run_name):
             os.makedirs(args.rnn_logdir+args.rnn_run_name)
         if args.mode == 'train_sequence':
+            write_spec(args)
             model.train()
 
 
 if __name__ == '__main__':
     # configure which gpu or cpu to use
-    os.environ['CUDA_VISIBLE_DEVICES'] = '2'
+    os.environ['CUDA_VISIBLE_DEVICES'] = '1'
     tf.app.run()
