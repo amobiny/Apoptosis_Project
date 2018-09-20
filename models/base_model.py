@@ -10,7 +10,7 @@ class BaseModel(object):
         self.sess = sess
         self.conf = conf
         self.summary_list = []
-        if self.conf.mode != 'train_sequence' and self.conf.mode != 'get_features':
+        if self.conf.mode != 'train_sequence' and self.conf.mode != 'get_features' and self.conf.mode != 'test_sequence':
             self.input_shape = [conf.batch_size, conf.height, conf.width, conf.channel]
             self.output_shape = [self.conf.batch_size, self.conf.num_cls]
             self.global_step = tf.get_variable('global_step', [], initializer=tf.constant_initializer(0),
@@ -20,7 +20,6 @@ class BaseModel(object):
             self.output_shape = [conf.batch_size*conf.max_time, self.conf.num_cls]
 
         self.create_placeholders()
-
 
     def create_placeholders(self):
         with tf.name_scope('Input'):

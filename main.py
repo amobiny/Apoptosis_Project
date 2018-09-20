@@ -20,7 +20,7 @@ elif args.model == 'densenet':
 
 
 def main(_):
-    if args.mode not in ['train', 'train_sequence', 'test', 'get_features']:
+    if args.mode not in ['train', 'train_sequence', 'test', 'test_sequence', 'get_features']:
         print('invalid mode: ', args.mode)
         print("Please input a mode: train or test")
     elif args.mode == 'train' or args.mode == 'test' or args.mode == 'get_features':
@@ -48,9 +48,11 @@ def main(_):
         if args.mode == 'train_sequence':
             write_spec(args)
             model.train()
+        elif args.mode == 'test_sequence':
+            model.test(args.reload_step, args.rnn_reload_step)
 
 
 if __name__ == '__main__':
     # configure which gpu or cpu to use
-    os.environ['CUDA_VISIBLE_DEVICES'] = '1'
+    os.environ['CUDA_VISIBLE_DEVICES'] = '3'
     tf.app.run()

@@ -37,7 +37,13 @@ def write_spec(args):
         config_file.write('recurrent_model: ' + args.recurrent_model + '\n')
         config_file.write('num layers: ' + str(args.num_layers) + '\n')
         config_file.write('num hidden: ' + str(args.num_hidden) + '\n')
+        config_file.write('in_keep_prob: ' + str(args.in_keep_prob) + '\n')
+        config_file.write('out_keep_prob: ' + str(args.out_keep_prob) + '\n')
         config_file.write('rnn_run_name: ' + args.rnn_run_name + '\n')
+    if args.recurrent_model == "MANN":
+        config_file.write('memory_size: ' + str(args.memory_size) + '\n')
+        config_file.write('memory_vector_dim: ' + str(args.memory_vector_dim) + '\n')
+        config_file.write('read_head_num: ' + str(args.read_head_num) + '\n')
     config_file.close()
 
 

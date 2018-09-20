@@ -4,6 +4,8 @@ import numpy as np
 from sklearn.metrics import confusion_matrix
 from DataLoaders.Sequential_ApoptosisLoader import DataLoader
 import os
+from tensorflow.python.ops.rnn import _transpose_batch_time
+from config import args
 
 
 class RecNet(object):
@@ -12,6 +14,8 @@ class RecNet(object):
         self.conf = conf
         self.feature_extractor = cnn_model
         self.seqLen = tf.placeholder(tf.int32, [self.conf.batch_size])
+        self.in_keep_prob = tf.placeholder(tf.float32, shape=())
+        self.out_keep_prob = tf.placeholder(tf.float32, shape=())
         self.features = tf.reshape(self.feature_extractor.features, [conf.batch_size, conf.max_time, 32])
         self.summary_list = []
         self.build()
@@ -19,35 +23,61 @@ class RecNet(object):
 
     def build(self):
         with tf.variable_scope('RecNet'):
-            print('*'*20)
+            print('*' * 20)
             if self.conf.recurrent_model == 'RNN':
-                print('RNN with {} layers and {} hidden units generated'.
+                print('RNN with {} layer(s) and {} hidden units generated'.
                       format(self.conf.num_layers, self.conf.num_hidden))
                 cell = rnn.BasicRNNCell(self.conf.num_hidden)
                 outputs, states = tf.nn.dynamic_rnn(cell, self.features, sequence_length=self.seqLen, dtype=tf.float32)
                 weights = weight_variable(shape=[self.conf.num_hidden, self.conf.num_cls])
                 biases = bias_variable(shape=[self.conf.num_cls])
+                w_repeated = tf.tile(tf.expand_dims(weights, 0), [self.conf.batch_size, 1, 1])
+                logits_temp = tf.matmul(outputs, w_repeated) + biases
             elif self.conf.recurrent_model == 'LSTM':
-                print('LSTM with {} layers and {} hidden units generated'.
+                print('LSTM with {} layer(s) and {} hidden units generated'.
                       format(self.conf.num_layers, self.conf.num_hidden))
-                outputs = lstm(self.features, self.conf.num_layers, self.conf.num_hidden, self.conf.dropout_rate)
-                # cell = rnn.BasicLSTMCell(self.conf.num_hidden)
-                # cell = tf.contrib.rnn.MultiRNNCell([cell for _ in range(self.conf.num_layers)])
-                # cell = tf.nn.rnn_cell.MultiRNNCell([cell] * self.conf.num_layers)
-                # outputs, states = tf.nn.dynamic_rnn(cell, self.features, sequence_length=self.seqLen, dtype=tf.float32)
+                outputs = lstm(self.features, self.conf.num_layers, self.conf.num_hidden,
+                               self.in_keep_prob, self.out_keep_prob)
                 weights = weight_variable(shape=[self.conf.num_hidden[-1], self.conf.num_cls])
                 biases = bias_variable(shape=[self.conf.num_cls])
+                w_repeated = tf.tile(tf.expand_dims(weights, 0), [self.conf.batch_size, 1, 1])
+                logits_temp = tf.matmul(outputs, w_repeated) + biases
             elif self.conf.recurrent_model == 'BiLSTM':
-                print('Bidirectional LSTM with {} layers and {} hidden units generated'.
+                print('Bidirectional LSTM with {} layer(s) and {} hidden units generated'.
                       format(self.conf.num_layers, self.conf.num_hidden))
                 outputs = bidirectional_lstm(self.features, self.conf.num_layers,
-                                             self.conf.num_hidden, self.conf.dropout_rate)
-                weights = weight_variable(shape=[2*self.conf.num_hidden[-1], self.conf.num_cls])
+                                             self.conf.num_hidden, self.in_keep_prob, self.out_keep_prob)
+                weights = weight_variable(shape=[2 * self.conf.num_hidden[-1], self.conf.num_cls])
                 biases = bias_variable(shape=[self.conf.num_cls])
+                w_repeated = tf.tile(tf.expand_dims(weights, 0), [self.conf.batch_size, 1, 1])
+                logits_temp = tf.matmul(outputs, w_repeated) + biases
+            elif self.conf.recurrent_model == 'MANN':
+                from mann_cell import MANNCell
+                cell = MANNCell(self.conf.num_hidden, self.conf.memory_size, self.conf.memory_vector_dim,
+                                head_num=args.read_head_num)
+                state = cell.zero_state(args.batch_size, tf.float32)
+                self.o = []
+                for t in range(args.max_time):
+                    output, state = cell(self.features, state)
+                    with tf.variable_scope("o2o", reuse=(t > 0)):
+                        o2o_w = tf.get_variable('o2o_w', [output.get_shape()[1], args.num_cls],
+                                                initializer=tf.contrib.layers.xavier_initializer())
+                        tf.add_to_collection('reg_weights', o2o_w)
+                        # initializer=tf.random_normal_initializer(mean=0.0, stddev=0.1))
+                        o2o_b = tf.get_variable('o2o_b', [args.num_cls],
+                                                initializer=tf.contrib.layers.xavier_initializer())
+                        # initializer=tf.random_normal_initializer(mean=0.0, stddev=0.1))
+                        output = tf.nn.xw_plus_b(output, o2o_w, o2o_b)
+                        output = tf.nn.softmax(output, dim=1)
+                    self.o.append(output)
+                self.o = tf.stack(self.o, axis=1)
+
+            elif self.conf.recurrent_model == 'myrnn':
+                print('Bidirectional myRNN with {} layer(s) and {} hidden units generated'.
+                      format(self.conf.num_layers, self.conf.num_hidden))
+                logits_temp = self.my_rnn(self.features, self.conf.num_layers, self.conf.num_hidden)
         print('*' * 20)
-        w_repeated = tf.tile(tf.expand_dims(weights, 0), [self.conf.batch_size, 1, 1])
-        logits = tf.reshape(tf.matmul(outputs, w_repeated) + biases,
-                            [self.conf.batch_size * self.conf.max_time, self.conf.num_cls])
+        logits = tf.reshape(logits_temp, [self.conf.batch_size * self.conf.max_time, self.conf.num_cls])
         self.y_pred_tensor = tf.argmax(logits, axis=-1, name='predictions')
         labels = tf.reshape(self.feature_extractor.y, [self.conf.batch_size * self.conf.max_time, self.conf.num_cls])
         loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(labels=labels,
@@ -88,7 +118,7 @@ class RecNet(object):
     def train(self):
         self.sess.run(tf.local_variables_initializer())
         self.sess.run(tf.global_variables_initializer())
-        self.reload_cnn()
+        self.reload_cnn(self.conf.reload_step)
         self.best_validation_accuracy = 0
         self.data_reader = DataLoader(self.conf)
         self.data_reader.get_data(mode='train')
@@ -104,6 +134,7 @@ class RecNet(object):
                 x_batch, y_batch = self.data_reader.next_batch(start, end, mode='train')
                 feed_dict = {self.feature_extractor.x: x_batch, self.feature_extractor.y: y_batch,
                              self.feature_extractor.is_training: True,
+                             self.in_keep_prob: self.conf.in_keep_prob, self.out_keep_prob: self.conf.out_keep_prob,
                              self.seqLen: self.conf.max_time * np.ones(self.conf.batch_size)}
                 if train_step % self.conf.SUMMARY_FREQ == 0:
                     _, _, _, summary = self.sess.run([self.train_op,
@@ -126,6 +157,7 @@ class RecNet(object):
             x_val, y_val = self.data_reader.next_batch(start, end, mode='valid')
             feed_dict = {self.feature_extractor.x: x_val, self.feature_extractor.y: y_val,
                          self.feature_extractor.is_training: False,
+                         self.in_keep_prob: 1, self.out_keep_prob: 1,
                          self.seqLen: self.conf.max_time * np.ones(self.conf.batch_size)}
             yp, _, _ = self.sess.run([self.y_pred_tensor, self.mean_loss_op, self.mean_accuracy_op],
                                      feed_dict=feed_dict)
@@ -147,51 +179,82 @@ class RecNet(object):
         print(confusion_matrix(y_true, y_pred))
         print('-' * 60)
 
-    def test(self, step_num):
-        self.reload(step_num)
+    def test(self, cnn_step_num, rnn_step_num):
+        self.reload_cnn(cnn_step_num)
+        self.reload_rnn(rnn_step_num)
         self.data_reader = DataLoader(self.conf)
         self.data_reader.get_data(mode='test')
         self.num_test_batch = self.data_reader.count_num_batch(self.conf.batch_size, mode='test')
         self.is_train = False
         self.sess.run(tf.local_variables_initializer())
-        y_pred = np.zeros((self.data_reader.y_test.shape[0]))
+        y_pred = np.zeros((self.data_reader.y_test.shape[0]) * self.conf.max_time)
         for step in range(self.num_test_batch):
             start = step * self.conf.batch_size
             end = (step + 1) * self.conf.batch_size
             x_test, y_test = self.data_reader.next_batch(start, end, mode='test')
-            feed_dict = {self.x: x_test, self.y: y_test, self.feature_extractor.is_training: False}
-            yp, _, _ = self.sess.run([self.y_pred, self.mean_loss_op, self.mean_accuracy_op], feed_dict=feed_dict)
-            y_pred[start:end] = yp
+            feed_dict = {self.feature_extractor.x: x_test, self.feature_extractor.y: y_test,
+                         self.feature_extractor.is_training: False,
+                         self.in_keep_prob: 1, self.out_keep_prob: 1,
+                         self.seqLen: self.conf.max_time * np.ones(self.conf.batch_size)}
+            yp, _, _ = self.sess.run([self.y_pred_tensor, self.mean_loss_op, self.mean_accuracy_op],
+                                     feed_dict=feed_dict)
+            y_pred[start * self.conf.max_time:end * self.conf.max_time] = yp
         test_loss, test_acc = self.sess.run([self.mean_loss, self.mean_accuracy])
         print('-' * 18 + 'Test Completed' + '-' * 18)
         print('test_loss= {0:.4f}, test_acc={1:.01%}'.format(test_loss, test_acc))
-        print(confusion_matrix(np.argmax(self.data_reader.y_test, axis=1), y_pred))
+        y_true = np.reshape(np.argmax(self.data_reader.y_test, axis=-1), [-1])
+        print(confusion_matrix(y_true, y_pred))
         print('-' * 50)
+
+        pred = np.reshape(y_pred, (self.data_reader.y_test.shape[0], self.conf.max_time))  # [2369, 72]
+        true = np.argmax(self.data_reader.y_test, axis=-1)  # [2369, 72]
+
+        count = 0
+        for i in range(pred.shape[0]):
+            prev_y = 0  # at the beginning of the sequence
+            for j in range(pred.shape[1]):
+                if prev_y == 1 and pred[i, j] == 0:
+                    count += 1
+                prev_y = pred[i, j]
+        print(count)
 
     def save(self, step):
         print('----> Saving the model at step #{0}'.format(step))
         checkpoint_path = os.path.join(self.conf.rnn_modeldir + self.conf.rnn_run_name, self.conf.rnn_model_name)
         self.rnn_saver.save(self.sess, checkpoint_path, global_step=step)
 
-    def reload(self, step):
+    def reload_rnn(self, step):
         checkpoint_path = os.path.join(self.conf.rnn_modeldir + self.conf.rnn_run_name, self.conf.rnn_model_name)
         model_path = checkpoint_path + '-' + str(step)
         if not os.path.exists(model_path + '.meta'):
             print('----> No such checkpoint found', model_path)
             return
-        print('----> Restoring the model...')
-        self.saver.restore(self.sess, model_path)
-        print('----> Model successfully restored')
+        print('----> Restoring the RNN model...')
+        self.rnn_saver.restore(self.sess, model_path)
+        print('----> RNN Model successfully restored')
 
-    def reload_cnn(self):
+    def reload_cnn(self, step):
         checkpoint_path = os.path.join(self.conf.modeldir + self.conf.run_name, self.conf.model_name)
-        model_path = checkpoint_path + '-' + str(self.conf.reload_step)
+        model_path = checkpoint_path + '-' + str(step)
         if not os.path.exists(model_path + '.meta'):
             print('----> No such checkpoint found', model_path)
             return
         print('----> Restoring the CNN model...')
         self.cnn_saver.restore(self.sess, model_path)
         print('----> CNN Model successfully restored')
+
+    def my_rnn(self, input_data, num_layers, rnn_size):
+        output = input_data
+        ys = tf.reshape(self.feature_extractor.y, [self.conf.batch_size, self.conf.max_time, self.conf.num_cls])
+        for layer in range(num_layers):
+            with tf.variable_scope('encoder_{}'.format(layer), reuse=tf.AUTO_REUSE):
+                cell = tf.contrib.rnn.LSTMCell(rnn_size[layer])
+                output, _ = sampling_rnn(cell,
+                                         initial_state=cell.zero_state(self.conf.batch_size, dtype=tf.float32),
+                                         input_=output, true_output=ys,
+                                         seq_lengths=self.conf.max_time,
+                                         is_train=self.feature_extractor.is_training)
+        return output
 
 
 def weight_variable(shape):
@@ -219,14 +282,17 @@ def bias_variable(shape):
                            initializer=initer)
 
 
-def bidirectional_lstm(input_data, num_layers, rnn_size, keep_prob):
+def bidirectional_lstm(input_data, num_layers, rnn_size, in_keep_prob, out_keep_prob):
     output = input_data
     for layer in range(num_layers):
         with tf.variable_scope('encoder_{}'.format(layer), reuse=tf.AUTO_REUSE):
-            cell_fw = tf.contrib.rnn.LSTMCell(rnn_size[layer], initializer=tf.truncated_normal_initializer(-0.1, 0.1, seed=2))
-            # cell_fw = tf.contrib.rnn.DropoutWrapper(cell_fw, input_keep_prob=keep_prob)
-            cell_bw = tf.contrib.rnn.LSTMCell(rnn_size[layer], initializer=tf.truncated_normal_initializer(-0.1, 0.1, seed=2))
-            # cell_bw = rnn.DropoutWrapper(cell_bw, input_keep_prob=keep_prob)
+            cell_fw = tf.contrib.rnn.LSTMCell(rnn_size[layer],
+                                              initializer=tf.truncated_normal_initializer(-0.1, 0.1, seed=2))
+            cell_fw = tf.contrib.rnn.DropoutWrapper(cell_fw, input_keep_prob=in_keep_prob
+                                                    , output_keep_prob=out_keep_prob)
+            cell_bw = tf.contrib.rnn.LSTMCell(rnn_size[layer],
+                                              initializer=tf.truncated_normal_initializer(-0.1, 0.1, seed=2))
+            cell_bw = rnn.DropoutWrapper(cell_bw, input_keep_prob=in_keep_prob, output_keep_prob=out_keep_prob)
             outputs, states = tf.nn.bidirectional_dynamic_rnn(cell_fw,
                                                               cell_bw,
                                                               output,
@@ -235,12 +301,90 @@ def bidirectional_lstm(input_data, num_layers, rnn_size, keep_prob):
     return output
 
 
-def lstm(input_data, num_layers, rnn_size, keep_prob):
+def lstm(input_data, num_layers, rnn_size, in_keep_prob, out_keep_prob):
     output = input_data
     for layer in range(num_layers):
         with tf.variable_scope('encoder_{}'.format(layer), reuse=tf.AUTO_REUSE):
-            # cell = tf.contrib.rnn.LSTMCell(rnn_size, initializer=tf.truncated_normal_initializer(-0.1, 0.1, seed=2))
             cell = tf.contrib.rnn.LSTMCell(rnn_size[layer])
-            # cell = rnn.DropoutWrapper(cell, input_keep_prob=keep_prob)
-            output, _ = tf.nn.dynamic_rnn(cell, output, dtype=tf.float32)
+            cell = rnn.DropoutWrapper(cell, input_keep_prob=in_keep_prob, output_keep_prob=out_keep_prob)
+            output, states = tf.nn.dynamic_rnn(cell, output, dtype=tf.float32)
     return output
+
+
+def sampling_rnn(cell, initial_state, input_, true_output, seq_lengths, is_train):
+    # raw_rnn expects time major inputs as TensorArrays
+    max_time = args.max_time  # this is the max time step per batch
+    inputs_ta = tf.TensorArray(dtype=tf.float32, size=max_time, clear_after_read=False)
+    inputs_ta = inputs_ta.unstack(_transpose_batch_time(input_))  # input_ is the input placeholder
+    input_dim = input_.get_shape()[-1].value  # the dimensionality of the input to each time step
+    output_dim = args.num_cls  # the dimensionality of the model's output at each time step
+
+    def loop_fn(time, cell_output, cell_state, loop_state):
+        """
+        Loop function that allows to control input to the rnn cell and manipulate cell outputs.
+        :param time: current time step
+        :param cell_output: output from previous time step or None if time == 0
+        :param cell_state: cell state from previous time step
+        :param loop_state: custom loop state to share information between different iterations of this loop fn
+        :return: tuple consisting of
+          elements_finished: tensor of size [bach_size] which is True for sequences that have reached their end,
+            needed because of variable sequence size
+          next_input: input to next time step
+          next_cell_state: cell state forwarded to next time step
+          emit_output: The first return argument of raw_rnn. This is not necessarily the output of the RNN cell,
+            but could e.g. be the output of a dense layer attached to the rnn layer.
+          next_loop_state: loop state forwarded to the next time step
+        """
+        if cell_output is None:
+            # time == 0, used for initialization before first call to cell
+            next_cell_state = initial_state
+            # the emit_output in this case tells TF how future emits look
+            emit_output = tf.zeros([output_dim])
+        else:
+            # t > 0, called right after call to cell, i.e. cell_output is the output from time t-1.
+            # here you can do whatever you want with cell_output before assigning it to emit_output.
+            # In this case, we don't do anything
+            next_cell_state = cell_state
+            emit_output = tf.layers.dense(cell_output, 2,
+                                          name='output_to_p',
+                                          reuse=tf.AUTO_REUSE)
+
+        # check which elements are finished
+        elements_finished = (time >= seq_lengths)
+        finished = tf.reduce_all(elements_finished)
+
+        # assemble cell input for upcoming time step
+        current_output = emit_output if cell_output is not None else None
+        input_original = inputs_ta.read(time)  # tensor of shape (batch_size, input_dim)
+
+        if current_output is None:
+            # this is the initial step, i.e. there is no output from a previous time step, what we feed here
+            # can highly depend on the data. In this case we just assign the actual input in the first time step.
+            next_in = tf.concat((input_original, tf.zeros((args.batch_size, output_dim))), axis=-1)
+        else:
+            # time > 0, so just use previous output as next input
+            # here you could do fancier things, whatever you want to do before passing the data into the rnn cell
+            # if here you were to pass input_original than you would get the normal behaviour of dynamic_rnn
+            when_train = tf.concat((input_original, true_output[:, time - 1, :]), axis=-1)
+            when_test = tf.concat((input_original, current_output), axis=-1)
+            next_in = tf.cond(is_train,
+                              lambda: when_train,
+                              lambda: when_test)
+
+        next_input = tf.cond(finished,
+                             lambda: tf.zeros([args.batch_size, input_dim + output_dim], dtype=tf.float32),
+                             # copy through zeros
+                             lambda: next_in)  # if not finished, feed the previous output as next input
+
+        # set shape manually, otherwise it is not defined for the last dimensions
+        next_input.set_shape([args.batch_size, input_dim + output_dim])
+
+        # loop state not used in this example
+        next_loop_state = None
+        return (elements_finished, next_input, next_cell_state, emit_output, next_loop_state)
+
+    outputs_ta, last_state, _ = tf.nn.raw_rnn(cell, loop_fn)
+    outputs = _transpose_batch_time(outputs_ta.stack())
+    final_state = last_state
+
+    return outputs, final_state

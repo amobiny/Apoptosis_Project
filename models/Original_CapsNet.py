@@ -9,7 +9,7 @@ class Orig_CapsNet(BaseModel):
     def __init__(self, sess, conf):
         super(Orig_CapsNet, self).__init__(sess, conf)
         self.build_network(self.x)
-        if self.conf.mode != 'train_sequence':
+        if self.conf.mode != 'train_sequence' and self.conf.mode != 'test_sequence':
             self.configure_network()
 
     def build_network(self, x):
@@ -30,13 +30,12 @@ class Orig_CapsNet(BaseModel):
             # Layer 3: Digit Capsule Layer; Here is where the routing takes place
             self.digit_caps = FCCapsuleLayer(num_caps=self.conf.num_cls, caps_dim=self.conf.digit_caps_dim,
                                              routings=3, name='digit_caps', trainable=self.conf.trainable)(caps1_output)
-            # [?, 10, 16]
+            # [?, 2, 16]
 
             epsilon = 1e-9
             self.v_length = tf.sqrt(tf.reduce_sum(tf.square(self.digit_caps), axis=2, keep_dims=True) + epsilon)
-            # [?, 10, 1]
+            # [?, 2, 1]
             self.act = tf.reshape(self.v_length, (-1, self.conf.num_cls))
-
             y_prob_argmax = tf.to_int32(tf.argmax(self.v_length, axis=1))
             # [?, 1]
             self.y_pred = tf.squeeze(y_prob_argmax)
@@ -45,9 +44,6 @@ class Orig_CapsNet(BaseModel):
             if self.conf.add_recon_loss:
                 self.mask()
                 self.decoder()
-
-            # if self.conf.mode == 'train_sequence':
-            #     self.saver = tf.train.Saver(var_list=tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='CapsNet'))
 
             if self.conf.before_mask:
                 self.features = self.digit_caps
