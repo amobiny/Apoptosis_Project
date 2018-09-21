@@ -269,19 +269,31 @@ class BaseModel(object):
         self.is_train = False
         self.sess.run(tf.local_variables_initializer())
         y_pred = np.zeros((self.data_reader.y_test.shape[0]))
+        img_recon = np.zeros((self.data_reader.y_test.shape[0], self.conf.height*self.conf.width))
         for step in range(self.num_test_batch):
             start = step * self.conf.batch_size
             end = (step + 1) * self.conf.batch_size
             x_test, y_test = self.data_reader.next_batch(start, end, mode='test')
             feed_dict = {self.x: x_test, self.y: y_test, self.is_training: False}
-            yp, _, _ = self.sess.run([self.y_pred, self.mean_loss_op, self.mean_accuracy_op],
+            yp, _, _, img = self.sess.run([self.y_pred, self.mean_loss_op, self.mean_accuracy_op, self.decoder_output],
                                      feed_dict=feed_dict)
             y_pred[start:end] = yp
+            img_recon[start:end] = img
         test_loss, test_acc = self.sess.run([self.mean_loss, self.mean_accuracy])
         print('-' * 18 + 'Test Completed' + '-' * 18)
         print('test_loss= {0:.4f}, test_acc={1:.01%}'.format(test_loss, test_acc))
         print(confusion_matrix(np.argmax(self.data_reader.y_test, axis=1), y_pred))
         print('-' * 50)
+
+        import matplotlib.pyplot as plt
+
+        imgs_num = [100, 200, 300, 400, 500]
+
+        plt.imshow(self.data_reader.x_test[img_num].reshape(28, 28), cmap='gray')
+        plt.show()
+        plt.figure()
+        plt.imshow(img_recon[img_num].reshape(28, 28), cmap='gray')
+        plt.show()
 
     def get_features(self, step_num):
         self.sess.run(tf.local_variables_initializer())

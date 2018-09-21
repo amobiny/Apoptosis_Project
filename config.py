@@ -3,13 +3,13 @@ import tensorflow as tf
 # reload_step: alexnet: 33749, resnet: 123749, original_capsule: 1583999, vector_capsule: 2964599
 
 flags = tf.app.flags
-flags.DEFINE_string('mode', 'train_sequence', 'train, train_sequence, test, test_sequence or get_features')
-flags.DEFINE_integer('reload_step', 1583999, 'model number to load (either for testing or continue training)')
-flags.DEFINE_string('run_name', 'orig_1', 'Run name')
-flags.DEFINE_string('model', 'original_capsule', 'alexnet, resnet, densenet, original_capsule, '
-                                                 'fast_capsule, matrix_capsule or vector_capsule')
+flags.DEFINE_string('mode', 'train', 'train, train_sequence, test, test_sequence or get_features')
+flags.DEFINE_integer('reload_step', 0, 'model number to load (either for testing or continue training)')
+flags.DEFINE_string('run_name', 'alex_0.05', 'Run name')
+flags.DEFINE_string('model', 'alexnet', 'alexnet, resnet, densenet, original_capsule, '
+                                        'fast_capsule, matrix_capsule or vector_capsule')
 flags.DEFINE_string('loss_type', 'cross_entropy', 'cross_entropy, spread or margin')
-flags.DEFINE_boolean('add_recon_loss', True, 'To add reconstruction loss')
+flags.DEFINE_boolean('add_recon_loss', False, 'To add reconstruction loss')
 flags.DEFINE_boolean('L2_reg', False, 'Adds L2-regularization to all the network weights')
 flags.DEFINE_float('lmbda', 5e-04, 'L2-regularization coefficient')
 
@@ -62,7 +62,7 @@ flags.DEFINE_float('theta', 1, 'Compression factor in DenseNet')
 
 # CapsNet architecture
 flags.DEFINE_integer('prim_caps_dim', 8, 'Dimension of the PrimaryCaps in the Original_CapsNet')
-flags.DEFINE_integer('digit_caps_dim', 16, 'Dimension of the DigitCaps in the Original_CapsNet')
+flags.DEFINE_integer('digit_caps_dim', 32, 'Dimension of the DigitCaps in the Original_CapsNet')
 flags.DEFINE_integer('h1', 512, 'Number of hidden units of the first FC layer of the reconstruction network')
 flags.DEFINE_integer('h2', 1024, 'Number of hidden units of the second FC layer of the reconstruction network')
 
@@ -78,24 +78,23 @@ flags.DEFINE_integer('C', 8, 'C in Figure 1 of the paper')
 flags.DEFINE_integer('D', 8, 'D in Figure 1 of the paper')
 
 # RNN architecture
-flags.DEFINE_boolean('add_rnn', True, 'Just for writing the config file')
-flags.DEFINE_boolean('trainable', False, 'Whether to train the CNN or not')
+flags.DEFINE_boolean('add_rnn', False, 'Just for writing the config file')
+flags.DEFINE_boolean('trainable', True, 'Whether to train the CNN or not')
 flags.DEFINE_string('recurrent_model', 'MANN', 'RNN, LSTM, BiLSTM, and MANN')
 flags.DEFINE_integer('num_layers', 1, 'Number of rnn layers')
-flags.DEFINE_list('num_hidden', [128], 'Number of hidden units for the Recurrent structure')
+flags.DEFINE_list('num_hidden', [32], 'Number of hidden units for the Recurrent structure')
 flags.DEFINE_float('in_keep_prob', 0.8, 'input keep prob for dropout')
 flags.DEFINE_float('out_keep_prob', 0.8, 'output keep prob for dropout')
 flags.DEFINE_integer('max_time', 72, 'Maximum length of sequences')
 
 # MANN
-flags.DEFINE_integer('memory_size', 128, 'Number of memory slots for MANN')
+flags.DEFINE_integer('memory_size', 64, 'Number of memory slots for MANN')
 flags.DEFINE_integer('memory_vector_dim', 40, 'size of each memory slot for MANN')
 flags.DEFINE_integer('read_head_num', 4, 'Number of read heads for MANN')
 
-
 flags.DEFINE_boolean('before_mask', True, 'Decide to get the features before or after mask')
 
-flags.DEFINE_string('rnn_run_name', 'test', 'Run name')
+flags.DEFINE_string('rnn_run_name', 'run_24', 'Run name')
 flags.DEFINE_string('rnn_logdir', './Results_recurrent/log_dir/', 'Logs directory')
 flags.DEFINE_string('rnn_modeldir', './Results_recurrent/model_dir/', 'Saved models directory')
 flags.DEFINE_integer('rnn_reload_step', 0, 'Reload step to continue training')

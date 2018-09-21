@@ -52,13 +52,15 @@ class RecNet(object):
                 w_repeated = tf.tile(tf.expand_dims(weights, 0), [self.conf.batch_size, 1, 1])
                 logits_temp = tf.matmul(outputs, w_repeated) + biases
             elif self.conf.recurrent_model == 'MANN':
+                print('MANN with {} layer(s) and {} hidden units generated'.
+                      format(self.conf.num_layers, self.conf.num_hidden))
                 from mann_cell import MANNCell
-                cell = MANNCell(self.conf.num_hidden, self.conf.memory_size, self.conf.memory_vector_dim,
+                cell = MANNCell(self.conf.num_hidden[0], self.conf.memory_size, self.conf.memory_vector_dim,
                                 head_num=args.read_head_num)
                 state = cell.zero_state(args.batch_size, tf.float32)
                 self.o = []
                 for t in range(args.max_time):
-                    output, state = cell(self.features, state)
+                    output, state = cell(self.features[:, t, :], state)
                     with tf.variable_scope("o2o", reuse=(t > 0)):
                         o2o_w = tf.get_variable('o2o_w', [output.get_shape()[1], args.num_cls],
                                                 initializer=tf.contrib.layers.xavier_initializer())
@@ -68,12 +70,13 @@ class RecNet(object):
                                                 initializer=tf.contrib.layers.xavier_initializer())
                         # initializer=tf.random_normal_initializer(mean=0.0, stddev=0.1))
                         output = tf.nn.xw_plus_b(output, o2o_w, o2o_b)
-                        output = tf.nn.softmax(output, dim=1)
+                        # output = tf.nn.softmax(output, dim=1)
                     self.o.append(output)
-                self.o = tf.stack(self.o, axis=1)
+                out = tf.stack(self.o, axis=1)
+                logits_temp = tf.reshape(out, [self.conf.batch_size*self.conf.max_time, self.conf.num_cls])
 
             elif self.conf.recurrent_model == 'myrnn':
-                print('Bidirectional myRNN with {} layer(s) and {} hidden units generated'.
+                print('myRNN with {} layer(s) and {} hidden units generated'.
                       format(self.conf.num_layers, self.conf.num_hidden))
                 logits_temp = self.my_rnn(self.features, self.conf.num_layers, self.conf.num_hidden)
         print('*' * 20)
