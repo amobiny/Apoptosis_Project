@@ -1,4 +1,5 @@
 import tensorflow as tf
+import numpy as np
 
 
 def spread_loss(labels, activations, margin, name):
@@ -46,3 +47,4 @@ def cross_entropy(y, logits):
         diff = tf.nn.softmax_cross_entropy_with_logits(labels=y, logits=logits)
     loss = tf.reduce_mean(diff)
     return loss
+

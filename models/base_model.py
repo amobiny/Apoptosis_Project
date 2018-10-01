@@ -75,7 +75,7 @@ class BaseModel(object):
                     orgin = tf.reshape(self.x, shape=(-1, self.conf.height * self.conf.width * self.conf.channel))
                     squared = tf.square(self.decoder_output - orgin)
                     self.recon_err = tf.reduce_mean(squared)
-                    self.total_loss = loss + self.conf.alpha * self.conf.width * self.conf.height * self.recon_err
+                    self.total_loss = loss + self.conf.alpha * self.recon_err
                     self.summary_list.append(tf.summary.scalar('reconstruction_loss', self.recon_err))
                     recon_img = tf.reshape(self.decoder_output,
                                            shape=(-1, self.conf.height, self.conf.width, self.conf.channel))

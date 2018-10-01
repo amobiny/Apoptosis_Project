@@ -35,6 +35,9 @@ class FCCapsuleLayer(layers.Layer):
         assert self.routings > 0, 'routing should be > 0.'
         for i in range(self.routings):
             # c.shape=[batch_size, num_caps, num_in_caps]
+            # b1 = tf.reshape(b, [K.shape(inputs_hat)[0], self.num_caps, 6, 6, 8])
+            # b2 = tf.tile(tf.reduce_mean(b1, axis=-1, keep_dims=True), [1, 1, 1, 1, 8])
+            # b = tf.reshape(b2, [K.shape(inputs_hat)[0], 2, 288])
             c = tf.nn.softmax(b, dim=1)
             activations = squash(K.batch_dot(c, inputs_hat, [2, 2]))  # [None, 10, 16]
 

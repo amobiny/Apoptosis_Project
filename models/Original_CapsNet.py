@@ -19,6 +19,9 @@ class Orig_CapsNet(BaseModel):
             conv1 = tf.keras.layers.Conv2D(filters=256, kernel_size=9, strides=1, trainable=self.conf.trainable,
                                            padding='valid', activation='relu', name='conv1')(x)
 
+            # conv2 = tf.keras.layers.Conv2D(filters=256, kernel_size=5, strides=2, trainable=self.conf.trainable,
+            #                                padding='valid', activation='relu', name='conv2')(conv1)
+
             # Layer 2: Primary Capsule Layer; simply a 2D conv + reshaping
             primary_caps = tf.keras.layers.Conv2D(filters=256, kernel_size=9, strides=2, trainable=self.conf.trainable,
                                          padding='valid', activation='relu', name='primary_caps')(conv1)

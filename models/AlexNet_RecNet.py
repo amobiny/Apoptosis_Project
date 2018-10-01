@@ -17,7 +17,7 @@ class RecNet(object):
         self.seqLen = tf.placeholder(tf.int32, [self.conf.batch_size])
         self.in_keep_prob = tf.placeholder(tf.float32, shape=())
         self.out_keep_prob = tf.placeholder(tf.float32, shape=())
-        self.features = tf.reshape(self.feature_extractor.features, [conf.batch_size, conf.max_time, 512])
+        self.features = tf.reshape(self.feature_extractor.features, [conf.batch_size, conf.max_time, 32])
         self.summary_list = []
         self.build()
         self.configure_summary()
@@ -98,10 +98,10 @@ class RecNet(object):
 
         scope = 'CapsNet'
         # if self.conf.trainable:
-        trained_vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope=scope)[:16]  #############
+        trained_vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope=scope)[:11]  #############
         # AlexNet: 16, ResNet: 426, CapsNet: 11,
         self.cnn_saver = tf.train.Saver(var_list=trained_vars, max_to_keep=1000)
-        self.rnn_saver = tf.train.Saver(var_list=tf.trainable_variables()+trained_vars, max_to_keep=1000)
+        self.rnn_saver = tf.train.Saver(var_list=tf.trainable_variables(), max_to_keep=1000)
 
     def configure_summary(self):
         self.train_writer = tf.summary.FileWriter(self.conf.rnn_logdir + self.conf.rnn_run_name + '/train/',
