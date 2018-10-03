@@ -3,6 +3,9 @@ import os
 import numpy as np
 from models.utils.loss_ops import margin_loss, spread_loss, cross_entropy
 from sklearn.metrics import confusion_matrix
+from sklearn.metrics import precision_recall_curve
+from models.utils.metrics import precision_recall
+import h5py
 
 
 class BaseModel(object):
@@ -229,13 +232,15 @@ class BaseModel(object):
     def evaluate(self, train_step):
         self.sess.run(tf.local_variables_initializer())
         y_pred = np.zeros((self.data_reader.y_valid.shape[0]))
+        y_prob = np.zeros((self.data_reader.y_valid.shape[0], self.conf.num_cls))
         for step in range(self.num_val_batch):
             start = step * self.conf.batch_size
             end = (step + 1) * self.conf.batch_size
             x_val, y_val = self.data_reader.next_batch(start, end, mode='valid')
             feed_dict = {self.x: x_val, self.y: y_val, self.is_training: False}
-            yp, _, _ = self.sess.run([self.y_pred, self.mean_loss_op, self.mean_accuracy_op], feed_dict=feed_dict)
+            yp, yprob, _, _ = self.sess.run([self.y_pred, self.prob, self.mean_loss_op, self.mean_accuracy_op], feed_dict=feed_dict)
             y_pred[start:end] = yp
+            y_prob[start:end] = yprob
         summary_valid = self.sess.run(self.merged_summary, feed_dict=feed_dict)
         valid_loss, valid_acc = self.sess.run([self.mean_loss, self.mean_accuracy])
         self.save_summary(summary_valid, train_step + self.conf.reload_step, mode='valid')
@@ -251,6 +256,13 @@ class BaseModel(object):
               .format(train_step, valid_loss, valid_acc, improved_str))
         print(confusion_matrix(np.argmax(self.data_reader.y_valid, axis=1), y_pred))
         print('-' * 60)
+        Precision, Recall, thresholds = precision_recall_curve(np.argmax(self.data_reader.y_valid, axis=1), y_prob[:, 1])
+        precision_recall(np.argmax(self.data_reader.y_valid, axis=1), y_pred)
+        h5f = h5py.File('densenet_' + str(train_step) + '.h5', 'w')
+        h5f.create_dataset('Precision', data=Precision)
+        h5f.create_dataset('Recall', data=Recall)
+        h5f.create_dataset('thresholds', data=thresholds)
+        h5f.close()
 
     def test(self, step_num):
         self.sess.run(tf.local_variables_initializer())
@@ -269,31 +281,40 @@ class BaseModel(object):
         self.is_train = False
         self.sess.run(tf.local_variables_initializer())
         y_pred = np.zeros((self.data_reader.y_test.shape[0]))
+        y_prob = np.zeros((self.data_reader.y_test.shape[0], self.conf.num_cls))
         img_recon = np.zeros((self.data_reader.y_test.shape[0], self.conf.height*self.conf.width))
         for step in range(self.num_test_batch):
             start = step * self.conf.batch_size
             end = (step + 1) * self.conf.batch_size
             x_test, y_test = self.data_reader.next_batch(start, end, mode='test')
-            feed_dict = {self.x: x_test, self.y: y_test, self.is_training: False}
-            yp, _, _, img = self.sess.run([self.y_pred, self.mean_loss_op, self.mean_accuracy_op, self.decoder_output],
+            feed_dict = {self.x: x_test, self.y: y_test, self.is_training: True}
+            yp, yprob, _, _ = self.sess.run([self.y_pred, self.prob, self.mean_loss_op, self.mean_accuracy_op],
                                      feed_dict=feed_dict)
             y_pred[start:end] = yp
-            img_recon[start:end] = img
+            y_prob[start:end] = yprob
         test_loss, test_acc = self.sess.run([self.mean_loss, self.mean_accuracy])
         print('-' * 18 + 'Test Completed' + '-' * 18)
         print('test_loss= {0:.4f}, test_acc={1:.01%}'.format(test_loss, test_acc))
         print(confusion_matrix(np.argmax(self.data_reader.y_test, axis=1), y_pred))
         print('-' * 50)
+        Precision, Recall, thresholds = precision_recall_curve(np.argmax(self.data_reader.y_test, axis=1), y_prob[:, 1])
+        precision_recall(np.argmax(self.data_reader.y_test, axis=1), y_pred)
+        import h5py
+        h5f = h5py.File('densenet_results.h5', 'w')
+        h5f.create_dataset('Precision', data=Precision)
+        h5f.create_dataset('Recall', data=Recall)
+        h5f.create_dataset('thresholds', data=thresholds)
+        h5f.close()
 
-        import matplotlib.pyplot as plt
-
-        imgs_num = [100, 200, 300, 400, 500]
-
-        plt.imshow(self.data_reader.x_test[img_num].reshape(28, 28), cmap='gray')
-        plt.show()
-        plt.figure()
-        plt.imshow(img_recon[img_num].reshape(28, 28), cmap='gray')
-        plt.show()
+        # import matplotlib.pyplot as plt
+        #
+        # imgs_num = [100, 200, 300, 400, 500]
+        #
+        # plt.imshow(self.data_reader.x_test[img_num].reshape(28, 28), cmap='gray')
+        # plt.show()
+        # plt.figure()
+        # plt.imshow(img_recon[img_num].reshape(28, 28), cmap='gray')
+        # plt.show()
 
     def get_features(self, step_num):
         self.sess.run(tf.local_variables_initializer())

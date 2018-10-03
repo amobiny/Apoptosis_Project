@@ -38,8 +38,8 @@ class AlexNet(BaseModel):
             self.logits = fc_layer(net, num_units=self.conf.num_cls, add_reg=self.conf.L2_reg,
                                    trainable=self.conf.trainable, layer_name='FC3')
             # [?, num_cls]
-            self.probs = tf.nn.softmax(self.logits)
+            self.prob = tf.nn.softmax(self.logits)
             # [?, num_cls]
-            self.y_pred = tf.to_int32(tf.argmax(self.probs, 1))
+            self.y_pred = tf.to_int32(tf.argmax(self.prob, 1))
             # [?] (predicted labels)
 

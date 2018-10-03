@@ -37,9 +37,9 @@ class ResNet(BaseModel):
             self.features = net
             self.logits = fc_layer(net, num_units=self.conf.num_cls, add_reg=self.conf.L2_reg, layer_name='Fc1')
             # [?, num_cls]
-            self.probs = tf.nn.softmax(self.logits)
+            self.prob = tf.nn.softmax(self.logits)
             # [?, num_cls]
-            self.y_pred = tf.to_int32(tf.argmax(self.probs, 1))
+            self.y_pred = tf.to_int32(tf.argmax(self.prob, 1))
             # [?] (predicted labels)
 
     def bottleneck_block(self, input_x, group, name, is_first_block=False):

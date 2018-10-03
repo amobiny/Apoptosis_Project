@@ -39,6 +39,7 @@ class Orig_CapsNet(BaseModel):
             self.v_length = tf.sqrt(tf.reduce_sum(tf.square(self.digit_caps), axis=2, keep_dims=True) + epsilon)
             # [?, 2, 1]
             self.act = tf.reshape(self.v_length, (-1, self.conf.num_cls))
+            self.prob = tf.nn.softmax(self.act)
             y_prob_argmax = tf.to_int32(tf.argmax(self.v_length, axis=1))
             # [?, 1]
             self.y_pred = tf.squeeze(y_prob_argmax)

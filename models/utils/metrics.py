@@ -43,3 +43,26 @@ def compute_sequence_accuracy(y_true, y_pred):
     print('Sequence-based accuracy={}'.format(accuracy))
     return accuracy
 
+
+def precision_recall(y_true, y_pred):
+    """
+    Computes the precision and recall values for the positive class
+    :param y_true: true labels
+    :param y_pred: predicted labels
+    """
+    TP = FP = FN = TN = 0
+    for i in range(len(y_pred)):
+        if y_true[i] == 1 and y_pred[i] == 1:
+            TP += 1
+        elif y_true[i] == 0 and y_pred[i] == 1:
+            FP += 1
+        elif y_true[i] == 1 and y_pred[i] == 0:
+            FN += 1
+        elif y_true[i] == 0 and y_pred[i] == 0:
+            TN += 1
+    precision = (TP * 100.0) / (TP + FP)
+    recall = (TP * 100.0) / (TP + FN)
+    f1 = (2 * precision * recall) / (precision + recall)
+    print('Precision: {0:.2f}'.format(precision))
+    print('Recall: {0:.2f}'.format(recall))
+    print('F1-score: {0:.2f}'.format(f1))
