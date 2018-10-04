@@ -19,8 +19,8 @@ class BaseModel(object):
             self.global_step = tf.get_variable('global_step', [], initializer=tf.constant_initializer(0),
                                                trainable=False)
         else:
-            self.input_shape = [conf.batch_size*conf.max_time, self.conf.height, self.conf.width, self.conf.channel]
-            self.output_shape = [conf.batch_size*conf.max_time, self.conf.num_cls]
+            self.input_shape = [conf.batch_size * conf.max_time, self.conf.height, self.conf.width, self.conf.channel]
+            self.output_shape = [conf.batch_size * conf.max_time, self.conf.num_cls]
 
         self.create_placeholders()
 
@@ -30,7 +30,7 @@ class BaseModel(object):
             self.y = tf.placeholder(tf.float32, self.output_shape, name='annotation')
             self.is_training = tf.placeholder_with_default(False, shape=(), name="is_training")
 
-    def mask(self):     # used in capsule network
+    def mask(self):  # used in capsule network
         with tf.variable_scope('Masking'):
             y_pred_ohe = tf.one_hot(self.y_pred, depth=self.conf.num_cls)
             # [?, 10] (one-hot-encoded predicted labels)
@@ -47,7 +47,8 @@ class BaseModel(object):
         with tf.variable_scope('Decoder'):
             decoder_input = tf.reshape(self.output_masked, [-1, self.conf.num_cls * self.conf.digit_caps_dim])
             # [?, 160]
-            fc1 = tf.layers.dense(decoder_input, self.conf.h1, activation=tf.nn.relu, name="FC1", trainable=self.conf.trainable)
+            fc1 = tf.layers.dense(decoder_input, self.conf.h1, activation=tf.nn.relu, name="FC1",
+                                  trainable=self.conf.trainable)
             # [?, 512]
             fc2 = tf.layers.dense(fc1, self.conf.h2, activation=tf.nn.relu, name="FC2", trainable=self.conf.trainable)
             # [?, 1024]
@@ -238,7 +239,8 @@ class BaseModel(object):
             end = (step + 1) * self.conf.batch_size
             x_val, y_val = self.data_reader.next_batch(start, end, mode='valid')
             feed_dict = {self.x: x_val, self.y: y_val, self.is_training: False}
-            yp, yprob, _, _ = self.sess.run([self.y_pred, self.prob, self.mean_loss_op, self.mean_accuracy_op], feed_dict=feed_dict)
+            yp, yprob, _, _ = self.sess.run([self.y_pred, self.prob, self.mean_loss_op, self.mean_accuracy_op],
+                                            feed_dict=feed_dict)
             y_pred[start:end] = yp
             y_prob[start:end] = yprob
         summary_valid = self.sess.run(self.merged_summary, feed_dict=feed_dict)
@@ -256,7 +258,8 @@ class BaseModel(object):
               .format(train_step, valid_loss, valid_acc, improved_str))
         print(confusion_matrix(np.argmax(self.data_reader.y_valid, axis=1), y_pred))
         print('-' * 60)
-        Precision, Recall, thresholds = precision_recall_curve(np.argmax(self.data_reader.y_valid, axis=1), y_prob[:, 1])
+        Precision, Recall, thresholds = precision_recall_curve(np.argmax(self.data_reader.y_valid, axis=1),
+                                                               y_prob[:, 1])
         precision_recall(np.argmax(self.data_reader.y_valid, axis=1), y_pred)
         h5f = h5py.File('densenet_' + str(train_step) + '.h5', 'w')
         h5f.create_dataset('Precision', data=Precision)
@@ -277,19 +280,28 @@ class BaseModel(object):
             from DataLoaders.ApoptosisLoader import DataLoader
         self.data_reader = DataLoader(self.conf)
         self.data_reader.get_data(mode='test')
+
+        import h5py
+        h5f = h5py.File('/home/cougarnet.uh.edu/amobiny/Desktop/Apoptosis_Project/data/sequential_data_28.h5', 'r')
+        x = h5f['X_test'][:]
+        y = h5f['Y_test'][:]
+        h5f.close()
+
+        self.data_reader.x_test = np.reshape(x, [-1, 28, 28, 1])
+        self.data_reader.y_test = np.reshape(y, [-1, 2])
         self.num_test_batch = self.data_reader.count_num_batch(self.conf.batch_size, mode='test')
         self.is_train = False
         self.sess.run(tf.local_variables_initializer())
         y_pred = np.zeros((self.data_reader.y_test.shape[0]))
         y_prob = np.zeros((self.data_reader.y_test.shape[0], self.conf.num_cls))
-        img_recon = np.zeros((self.data_reader.y_test.shape[0], self.conf.height*self.conf.width))
+        img_recon = np.zeros((self.data_reader.y_test.shape[0], self.conf.height * self.conf.width))
         for step in range(self.num_test_batch):
             start = step * self.conf.batch_size
             end = (step + 1) * self.conf.batch_size
             x_test, y_test = self.data_reader.next_batch(start, end, mode='test')
             feed_dict = {self.x: x_test, self.y: y_test, self.is_training: True}
             yp, yprob, _, _ = self.sess.run([self.y_pred, self.prob, self.mean_loss_op, self.mean_accuracy_op],
-                                     feed_dict=feed_dict)
+                                            feed_dict=feed_dict)
             y_pred[start:end] = yp
             y_prob[start:end] = yprob
         test_loss, test_acc = self.sess.run([self.mean_loss, self.mean_accuracy])
@@ -299,11 +311,27 @@ class BaseModel(object):
         print('-' * 50)
         Precision, Recall, thresholds = precision_recall_curve(np.argmax(self.data_reader.y_test, axis=1), y_prob[:, 1])
         precision_recall(np.argmax(self.data_reader.y_test, axis=1), y_pred)
+
         import h5py
-        h5f = h5py.File('densenet_results.h5', 'w')
-        h5f.create_dataset('Precision', data=Precision)
-        h5f.create_dataset('Recall', data=Recall)
-        h5f.create_dataset('thresholds', data=thresholds)
+        h5f = h5py.File('cnn.h5', 'w')
+        h5f.create_dataset('y_true', data=np.argmax(y, axis=-1))
+        h5f.create_dataset('y_pred', data=np.reshape(y_pred, (-1, 72)))
+        h5f.close()
+
+
+
+
+        # import h5py
+        # h5f = h5py.File('densenet_results.h5', 'w')
+        # h5f.create_dataset('Precision', data=Precision)
+        # h5f.create_dataset('Recall', data=Recall)
+        # h5f.create_dataset('thresholds', data=thresholds)
+        # h5f.close()
+        import h5py
+        h5f = h5py.File('capsnet.h5', 'w')
+        h5f.create_dataset('x', data=self.data_reader.x_test)
+        h5f.create_dataset('y_true', data=np.argmax(self.data_reader.y_test, axis=-1))
+        h5f.create_dataset('y_pred', data=np.reshape(y_pred, (-1, 72)))
         h5f.close()
 
         # import matplotlib.pyplot as plt
@@ -328,17 +356,17 @@ class BaseModel(object):
         self.is_train = False
 
         self.sess.run(tf.local_variables_initializer())
-        y_pred = np.zeros((self.data_reader.y_test.shape[0])*self.conf.max_time)
-        features = np.zeros((self.data_reader.y_test.shape[0]*self.conf.max_time, 512))
+        y_pred = np.zeros((self.data_reader.y_test.shape[0]) * self.conf.max_time)
+        features = np.zeros((self.data_reader.y_test.shape[0] * self.conf.max_time, 512))
         for step in range(self.num_test_batch):
             start = step * self.conf.batch_size
             end = (step + 1) * self.conf.batch_size
             x_test, y_test = self.data_reader.next_batch(start, end, mode='test')
             feed_dict = {self.x: x_test, self.y: y_test, self.is_training: False}
             yp, feats, _, _ = self.sess.run([self.y_pred, self.features, self.mean_loss_op, self.mean_accuracy_op],
-                                     feed_dict=feed_dict)
-            y_pred[start*self.conf.max_time:end*self.conf.max_time] = yp
-            features[start*self.conf.max_time:end*self.conf.max_time] = feats
+                                            feed_dict=feed_dict)
+            y_pred[start * self.conf.max_time:end * self.conf.max_time] = yp
+            features[start * self.conf.max_time:end * self.conf.max_time] = feats
         test_features = np.reshape(features, [-1, self.conf.max_time, 512])
         test_loss, test_acc = self.sess.run([self.mean_loss, self.mean_accuracy])
         print('-' * 18 + 'Test Completed' + '-' * 18)
@@ -348,17 +376,17 @@ class BaseModel(object):
         print('-' * 50)
 
         self.sess.run(tf.local_variables_initializer())
-        y_pred = np.zeros((self.data_reader.y_train.shape[0])*self.conf.max_time)
-        features = np.zeros((self.data_reader.y_train.shape[0]*self.conf.max_time, 512))
+        y_pred = np.zeros((self.data_reader.y_train.shape[0]) * self.conf.max_time)
+        features = np.zeros((self.data_reader.y_train.shape[0] * self.conf.max_time, 512))
         for step in range(self.num_test_batch):
             start = step * self.conf.batch_size
             end = (step + 1) * self.conf.batch_size
             x_train, y_train = self.data_reader.next_batch(start, end, mode='train')
             feed_dict = {self.x: x_train, self.y: y_train, self.is_training: False}
             yp, feats, _, _ = self.sess.run([self.y_pred, self.features, self.mean_loss_op, self.mean_accuracy_op],
-                                     feed_dict=feed_dict)
-            y_pred[start*self.conf.max_time:end*self.conf.max_time] = yp
-            features[start*self.conf.max_time:end*self.conf.max_time] = feats
+                                            feed_dict=feed_dict)
+            y_pred[start * self.conf.max_time:end * self.conf.max_time] = yp
+            features[start * self.conf.max_time:end * self.conf.max_time] = feats
         train_features = np.reshape(features, [-1, self.conf.max_time, 512])
         train_loss, train_acc = self.sess.run([self.mean_loss, self.mean_accuracy])
         print('-' * 18 + 'Test Completed' + '-' * 18)
@@ -376,8 +404,6 @@ class BaseModel(object):
         h5f.create_dataset('X_test', data=test_features)
         h5f.create_dataset('Y_test', data=self.data_reader.y_test)
         h5f.close()
-
-
 
     def save(self, step):
         print('----> Saving the model at step #{0}'.format(step))

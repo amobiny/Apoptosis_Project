@@ -3,7 +3,7 @@ import tensorflow as tf
 # reload_step: alexnet: 33749, resnet: 123749, original_capsule: 1583999, vector_capsule: 2964599
 
 flags = tf.app.flags
-flags.DEFINE_string('mode', 'test', 'train, train_sequence, test, test_sequence or get_features')
+flags.DEFINE_string('mode', 'train_sequence', 'train, train_sequence, test, test_sequence or get_features')
 flags.DEFINE_integer('reload_step', 33749, 'model number to load (either for testing or continue training)')
 flags.DEFINE_string('run_name', 'alexnet_1', 'Run name')
 flags.DEFINE_string('model', 'alexnet', 'alexnet, resnet, densenet, original_capsule, '
@@ -78,7 +78,7 @@ flags.DEFINE_integer('C', 8, 'C in Figure 1 of the paper')
 flags.DEFINE_integer('D', 8, 'D in Figure 1 of the paper')
 
 # RNN architecture
-flags.DEFINE_boolean('add_rnn', False, 'Just for writing the config file')
+flags.DEFINE_boolean('add_rnn', True, 'Just for writing the config file')
 flags.DEFINE_boolean('trainable', True, 'Whether to train the CNN or not')
 flags.DEFINE_string('recurrent_model', 'LSTM', 'RNN, LSTM, BiLSTM, and MANN')
 flags.DEFINE_integer('num_layers', 2, 'Number of rnn layers')

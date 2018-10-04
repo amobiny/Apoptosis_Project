@@ -101,7 +101,7 @@ class RecNet(object):
         trained_vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope=scope)[:16]  #############
         # AlexNet: 16, ResNet: 426, CapsNet: 11,
         self.cnn_saver = tf.train.Saver(var_list=trained_vars, max_to_keep=1000)
-        self.rnn_saver = tf.train.Saver(var_list=tf.trainable_variables()+trained_vars, max_to_keep=1000)
+        self.rnn_saver = tf.train.Saver(var_list=tf.trainable_variables(), max_to_keep=1000)
 
     def configure_summary(self):
         self.train_writer = tf.summary.FileWriter(self.conf.rnn_logdir + self.conf.rnn_run_name + '/train/',
@@ -211,54 +211,12 @@ class RecNet(object):
         print('-' * 50)
 
         compute_sequence_accuracy(np.argmax(self.data_reader.y_test, axis=-1), np.reshape(y_pred, (-1, 72)))
-
-
-        # pred = np.reshape(y_pred, (self.data_reader.y_test.shape[0], self.conf.max_time))  # [2369, 72]
-        # true = np.argmax(self.data_reader.y_test, axis=-1)  # [2369, 72]
-        #
-        # count = 0
-        # for i in range(pred.shape[0]):
-        #     prev_y = 0  # at the beginning of the sequence
-        #     for j in range(pred.shape[1]):
-        #         if prev_y == 1 and pred[i, j] == 0:
-        #             count += 1
-        #         prev_y = pred[i, j]
-        # print(count)
-
-        # LSTM_count = 0
-        # Sequence_Length = 72
-        # import random
-        # for _ in range(500):
-        #     index = random.randint(0, 2369)
-        #     X2 = self.data_reader.x_test[index].reshape(1, 72, 28, 28, 1)
-        #     y2 = self.data_reader.y_test[index].reshape(1, 72, 2)
-        #
-        #     yhat = np.reshape(y_pred, (-1, 72))
-        #     yy = np.argmax(self.data_reader.y_test, axis=2)
-        #
-        #     GT_ones = get_ones(yy[0])
-        #     GT_ones_in_a_row = get_consecutive_ones(yy[0])
-        #     if GT_ones > Sequence_Length / 4.0 or GT_ones_in_a_row > 5:
-        #         GT = 1
-        #     else:
-        #         GT = 0
-        #     LSTM_ones = get_ones(yhat[0])
-        #     LSTM_ones_in_a_row = get_consecutive_ones(yhat[0])
-        #     if LSTM_ones > Sequence_Length / 4.0 or LSTM_ones_in_a_row > 5:
-        #         LSTM_seq = 1
-        #     else:
-        #         LSTM_seq = 0
-        #
-        #     if GT == LSTM_seq:
-        #         LSTM_count += 1
-        #
-        # print ("LSTM Accuracy:", LSTM_count / 5.0)
-
-
-
-
-
-
+        import h5py
+        h5f = h5py.File('bilstm_alexnet.h5', 'w')
+        h5f.create_dataset('x', data=self.data_reader.x_test)
+        h5f.create_dataset('y_true', data=np.argmax(self.data_reader.y_test, axis=-1))
+        h5f.create_dataset('y_pred', data=np.reshape(y_pred, (-1, 72)))
+        h5f.close()
 
     def save(self, step):
         print('----> Saving the model at step #{0}'.format(step))
@@ -297,7 +255,8 @@ class RecNet(object):
                                          seq_lengths=self.conf.max_time,
                                          is_train=self.feature_extractor.is_training)
         return output
-
+from tensorflow.python.tools.inspect_checkpoint import print_tensors_in_checkpoint_file
+print_tensors_in_checkpoint_file
 
 def weight_variable(shape):
     """
