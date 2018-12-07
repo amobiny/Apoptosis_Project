@@ -20,10 +20,10 @@ elif args.model == 'densenet':
 
 
 def main(_):
-    if args.mode not in ['train', 'train_sequence', 'test', 'test_sequence', 'get_features']:
+    if args.mode not in ['train', 'train_sequence', 'test', 'test_sequence', 'get_features', 'grad_cam']:
         print('invalid mode: ', args.mode)
         print("Please input a mode: train or test")
-    elif args.mode == 'train' or args.mode == 'test' or args.mode == 'get_features':
+    elif args.mode == 'train' or args.mode == 'test' or args.mode == 'get_features' or args.mode == 'grad_cam':
         model = Model(tf.Session(), args)
         if not os.path.exists(args.modeldir+args.run_name):
             os.makedirs(args.modeldir+args.run_name)
@@ -35,7 +35,12 @@ def main(_):
         elif args.mode == 'test':
             model.test(args.reload_step)
         elif args.mode == 'get_features':
-            model.get_features(args.step_num)
+            model.get_features(args.reload_step)
+        elif args.mode == 'grad_cam':
+            if not os.path.exists(args.imgdir + args.run_name):
+                os.makedirs(args.imgdir + args.run_name)
+            model.grad_cam(args.reload_step)
+
     elif args.mode == 'train_sequence' or args.mode == 'test_sequence':
         session = tf.Session()
         CNN_Model = Model(session, args)
@@ -54,5 +59,5 @@ def main(_):
 
 if __name__ == '__main__':
     # configure which gpu or cpu to use
-    os.environ['CUDA_VISIBLE_DEVICES'] = '0, 1'
+    # os.environ['CUDA_VISIBLE_DEVICES'] = '0, 1'
     tf.app.run()

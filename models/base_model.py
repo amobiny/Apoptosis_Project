@@ -6,6 +6,7 @@ from sklearn.metrics import confusion_matrix
 from sklearn.metrics import precision_recall_curve
 from models.utils.metrics import precision_recall
 import h5py
+from models.utils.plot_utils import visualize
 
 
 class BaseModel(object):
@@ -419,3 +420,31 @@ class BaseModel(object):
         print('----> Restoring the CNN model...')
         self.saver.restore(self.sess, model_path)
         print('----> CNN Model successfully restored')
+
+    def grad_cam(self, step_num):
+        cost = (-1) * tf.reduce_sum(tf.multiply(self.y, tf.log(self.prob)), axis=1)
+        # gradient for partial linearization. We only care about target visualization class.
+        y_c = tf.reduce_sum(tf.multiply(self.logits, self.y), axis=1)   # vgg.fc8: outputs before softmax
+        # Get last convolutional layer gradient for generating gradCAM visualization
+        target_conv_layer = self.net_grad   # vgg.pool5 of shape (batch_size, 7, 7, 512)
+        target_conv_layer_grad = tf.gradients(y_c, target_conv_layer)[0]
+        # Guided backpropagtion back to input layer
+        gb_grad = tf.gradients(cost, self.x)[0]
+
+        self.sess.run(tf.local_variables_initializer())
+        self.reload(step_num)
+        from DataLoaders.ApoptosisLoader import DataLoader
+        self.data_reader = DataLoader(self.conf)
+        self.data_reader.get_data(mode='test')
+        self.num_test_batch = self.data_reader.count_num_batch(self.conf.batch_size, mode='test')
+
+        for step in range(self.num_test_batch):
+            start = step * self.conf.batch_size
+            end = (step + 1) * self.conf.batch_size
+            x_test, y_test = self.data_reader.next_batch(start, end, mode='test')
+            prob, gb_grad_value, target_conv_layer_value, target_conv_layer_grad_value = self.sess.run(
+                [self.prob, gb_grad, target_conv_layer, target_conv_layer_grad],
+                feed_dict={self.x: x_test, self.y: y_test})
+
+            visualize(x_test, target_conv_layer_value, target_conv_layer_grad_value, gb_grad_value,
+                      prob, y_test, img_size=self.conf.height, fig_name='img_' + str(step))
