@@ -1,10 +1,9 @@
-from base_model import BaseModel
-from capsule_layers.Conv_Caps import ConvCapsuleLayer
-from capsule_layers.FC_Caps import FCCapsuleLayer
+from models.base_model import BaseModel
+from models.capsule_layers.Conv_Caps import ConvCapsuleLayer
+from models.capsule_layers.FC_Caps import FCCapsuleLayer
 from keras import layers
 import tensorflow as tf
 import numpy as np
-from models.utils.ops_capsule import Deconv2D
 from tensorflow.python.ops.image_ops_impl import ResizeMethod
 
 
@@ -45,6 +44,7 @@ class CapsNet(BaseModel):
             self.v_length = tf.sqrt(tf.reduce_sum(tf.square(self.digit_caps), axis=2, keep_dims=True) + epsilon)
             # [?, 10, 1]
             self.act = tf.reshape(self.v_length, (self.conf.batch_size, self.conf.num_cls))
+            self.prob = tf.nn.softmax(self.act)
 
             y_prob_argmax = tf.to_int32(tf.argmax(self.v_length, axis=1))
             # [?, 1]

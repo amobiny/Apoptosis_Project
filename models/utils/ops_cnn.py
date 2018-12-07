@@ -76,9 +76,38 @@ def batch_normalization(x, training, scope):
                    scale=True,
                    zero_debias_moving_mean=True):
         out = tf.cond(training,
-                      lambda: batch_norm(inputs=x, is_training=training, reuse=None),
-                      lambda: batch_norm(inputs=x, is_training=training, reuse=True))
+                      lambda: batch_norm(inputs=x, is_training=training, center=False, reuse=None),
+                      lambda: batch_norm(inputs=x, is_training=training, center=False, reuse=True))
         return out
+
+
+# def batch_normalization(inputs, training, scope='BN', decay=0.999, epsilon=1e-3):
+#     """
+#     creates a batch normalization layer
+#     :param inputs: input array
+#     :param is_training: boolean for differentiating train and test
+#     :param scope: scope name
+#     :param decay:
+#     :param epsilon:
+#     :return: normalized input
+#     """
+#     with tf.variable_scope(scope):
+#         scale = tf.Variable(tf.ones([inputs.get_shape()[-1]]))
+#         beta = tf.Variable(tf.zeros([inputs.get_shape()[-1]]))
+#         pop_mean = tf.Variable(tf.zeros([inputs.get_shape()[-1]]), trainable=False)
+#         pop_var = tf.Variable(tf.ones([inputs.get_shape()[-1]]), trainable=False)
+#
+#         if training:
+#             if len(inputs.get_shape().as_list()) == 4:  # For 2D convolutional layers
+#                 batch_mean, batch_var = tf.nn.moments(inputs, [0, 1, 2])
+#             else:  # For fully-connected layers
+#                 batch_mean, batch_var = tf.nn.moments(inputs, [0])
+#             train_mean = tf.assign(pop_mean, pop_mean * decay + batch_mean * (1 - decay))
+#             train_var = tf.assign(pop_var, pop_var * decay + batch_var * (1 - decay))
+#             with tf.control_dependencies([train_mean, train_var]):
+#                 return tf.nn.batch_normalization(inputs, batch_mean, batch_var, beta, scale, epsilon)
+#         else:
+#             return tf.nn.batch_normalization(inputs, pop_mean, pop_var, beta, scale, epsilon)
 
 
 def lrn(inputs, depth_radius=2, alpha=0.0001, beta=0.75, bias=1.0):

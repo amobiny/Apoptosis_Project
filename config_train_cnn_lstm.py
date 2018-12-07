@@ -3,8 +3,8 @@ import tensorflow as tf
 # reload_step: alexnet: 33749, resnet: 123749, original_capsule: 1583999, vector_capsule: 2964599
 
 flags = tf.app.flags
-flags.DEFINE_string('mode', 'train_sequence', 'train, train_sequence, test, test_sequence or get_features')
-flags.DEFINE_integer('reload_step', 33749, 'model number to load (either for testing or continue training)')
+flags.DEFINE_string('mode', 'test_sequence', 'train, train_sequence, test, test_sequence or get_features')
+flags.DEFINE_integer('reload_step', 21599, 'model number to load (either for testing or continue training)')
 flags.DEFINE_string('run_name', 'alexnet_1', 'Run name')
 flags.DEFINE_string('model', 'alexnet', 'alexnet, resnet, densenet, original_capsule, '
                                                  'fast_capsule, matrix_capsule or vector_capsule')

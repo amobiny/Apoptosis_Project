@@ -3,12 +3,12 @@ import tensorflow as tf
 # reload_step: alexnet: 33749, resnet: 123749, original_capsule: 1583999, vector_capsule: 2964599
 
 flags = tf.app.flags
-flags.DEFINE_string('mode', 'test', 'train, train_sequence, test, test_sequence or get_features')
-flags.DEFINE_integer('reload_step', 33749, 'model number to load (either for testing or continue training)')
-flags.DEFINE_string('run_name', 'alexnet_1', 'Run name')
-flags.DEFINE_string('model', 'alexnet', 'alexnet, resnet, densenet, original_capsule, '
+flags.DEFINE_string('mode', 'train', 'train, train_sequence, test, test_sequence, grad_cam or get_features')
+flags.DEFINE_integer('reload_step', 0, 'model number to load (either for testing or continue training)')
+flags.DEFINE_string('run_name', 'vec_1', 'Run name')
+flags.DEFINE_string('model', 'vector_capsule', 'alexnet, resnet, densenet, original_capsule, '
                                                  'fast_capsule, matrix_capsule or vector_capsule')
-flags.DEFINE_string('loss_type', 'cross_entropy', 'cross_entropy, spread or margin')
+flags.DEFINE_string('loss_type', 'margin', 'cross_entropy, spread or margin')
 flags.DEFINE_boolean('add_recon_loss', False, 'To add reconstruction loss')
 flags.DEFINE_boolean('L2_reg', False, 'Adds L2-regularization to all the network weights')
 flags.DEFINE_float('lmbda', 5e-04, 'L2-regularization coefficient')
@@ -25,8 +25,10 @@ flags.DEFINE_integer('VAL_FREQ', 500, 'Number of step to evaluate the network on
 flags.DEFINE_float('m_plus', 0.9, 'm+ parameter')
 flags.DEFINE_float('m_minus', 0.1, 'm- parameter')
 flags.DEFINE_float('lambda_val', 0.5, 'Down-weighting parameter for the absent class')
+
 # For reconstruction loss
 flags.DEFINE_float('alpha', 0.0005, 'Regularization coefficient to scale down the reconstruction loss')
+
 # For training
 flags.DEFINE_integer('batch_size', 10, 'training batch size')
 flags.DEFINE_float('init_lr', 1e-4, 'Initial learning rate')
@@ -42,14 +44,14 @@ flags.DEFINE_boolean('one_hot', False, 'one-hot-encodes the labels')
 flags.DEFINE_boolean('data_augment', False, 'Adds augmentation to data')
 flags.DEFINE_boolean('flip', False, 'Flips the data left to right and side to side')
 flags.DEFINE_integer('max_angle', 180, 'Maximum rotation angle along each axis; when applying augmentation')
-flags.DEFINE_integer('height', 28, 'Network input height size')
-flags.DEFINE_integer('width', 28, 'Network input width size')
-flags.DEFINE_integer('depth', 32, 'Network input depth size (in the case of 3D input images)')
+flags.DEFINE_integer('height', 51, 'Network input height size')
+flags.DEFINE_integer('width', 51, 'Network input width size')
 flags.DEFINE_integer('channel', 1, 'Network input channel size')
 
 # Directories
 flags.DEFINE_string('logdir', './Results/log_dir/', 'Logs directory')
 flags.DEFINE_string('modeldir', './Results/model_dir/', 'Saved models directory')
+flags.DEFINE_string('imgdir', './Results/image_dir/', 'Path to save images')
 flags.DEFINE_string('model_name', 'model', 'Model file name')
 
 # CNN architecture
@@ -91,7 +93,6 @@ flags.DEFINE_integer('max_time', 72, 'Maximum length of sequences')
 flags.DEFINE_integer('memory_size', 64, 'Number of memory slots for MANN')
 flags.DEFINE_integer('memory_vector_dim', 40, 'size of each memory slot for MANN')
 flags.DEFINE_integer('read_head_num', 4, 'Number of read heads for MANN')
-
 
 flags.DEFINE_boolean('before_mask', True, 'Decide to get the features before or after mask')
 

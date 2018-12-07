@@ -6,7 +6,9 @@ from DataLoaders.Sequential_ApoptosisLoader import DataLoader
 import os
 from tensorflow.python.ops.rnn import _transpose_batch_time
 from config import args
-from utils.metrics import *
+from models.utils.metrics import *
+
+from models.utils.metrics import compute_sequence_accuracy
 
 
 class RecNet(object):
@@ -211,12 +213,12 @@ class RecNet(object):
         print('-' * 50)
 
         compute_sequence_accuracy(np.argmax(self.data_reader.y_test, axis=-1), np.reshape(y_pred, (-1, 72)))
-        import h5py
-        h5f = h5py.File('bilstm_alexnet.h5', 'w')
-        h5f.create_dataset('x', data=self.data_reader.x_test)
-        h5f.create_dataset('y_true', data=np.argmax(self.data_reader.y_test, axis=-1))
-        h5f.create_dataset('y_pred', data=np.reshape(y_pred, (-1, 72)))
-        h5f.close()
+        # import h5py
+        # h5f = h5py.File('bilstm_alexnet.h5', 'w')
+        # h5f.create_dataset('x', data=self.data_reader.x_test)
+        # h5f.create_dataset('y_true', data=np.argmax(self.data_reader.y_test, axis=-1))
+        # h5f.create_dataset('y_pred', data=np.reshape(y_pred, (-1, 72)))
+        # h5f.close()
 
     def save(self, step):
         print('----> Saving the model at step #{0}'.format(step))

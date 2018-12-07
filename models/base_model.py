@@ -281,15 +281,6 @@ class BaseModel(object):
             from DataLoaders.ApoptosisLoader import DataLoader
         self.data_reader = DataLoader(self.conf)
         self.data_reader.get_data(mode='test')
-
-        import h5py
-        h5f = h5py.File('/home/cougarnet.uh.edu/amobiny/Desktop/Apoptosis_Project/data/sequential_data_28.h5', 'r')
-        x = h5f['X_test'][:]
-        y = h5f['Y_test'][:]
-        h5f.close()
-
-        self.data_reader.x_test = np.reshape(x, [-1, 28, 28, 1])
-        self.data_reader.y_test = np.reshape(y, [-1, 2])
         self.num_test_batch = self.data_reader.count_num_batch(self.conf.batch_size, mode='test')
         self.is_train = False
         self.sess.run(tf.local_variables_initializer())
@@ -300,7 +291,7 @@ class BaseModel(object):
             start = step * self.conf.batch_size
             end = (step + 1) * self.conf.batch_size
             x_test, y_test = self.data_reader.next_batch(start, end, mode='test')
-            feed_dict = {self.x: x_test, self.y: y_test, self.is_training: True}
+            feed_dict = {self.x: x_test, self.y: y_test, self.is_training: False}
             yp, yprob, _, _ = self.sess.run([self.y_pred, self.prob, self.mean_loss_op, self.mean_accuracy_op],
                                             feed_dict=feed_dict)
             y_pred[start:end] = yp
@@ -312,38 +303,6 @@ class BaseModel(object):
         print('-' * 50)
         Precision, Recall, thresholds = precision_recall_curve(np.argmax(self.data_reader.y_test, axis=1), y_prob[:, 1])
         precision_recall(np.argmax(self.data_reader.y_test, axis=1), y_pred)
-
-        import h5py
-        h5f = h5py.File('cnn.h5', 'w')
-        h5f.create_dataset('y_true', data=np.argmax(y, axis=-1))
-        h5f.create_dataset('y_pred', data=np.reshape(y_pred, (-1, 72)))
-        h5f.close()
-
-
-
-
-        # import h5py
-        # h5f = h5py.File('densenet_results.h5', 'w')
-        # h5f.create_dataset('Precision', data=Precision)
-        # h5f.create_dataset('Recall', data=Recall)
-        # h5f.create_dataset('thresholds', data=thresholds)
-        # h5f.close()
-        import h5py
-        h5f = h5py.File('capsnet.h5', 'w')
-        h5f.create_dataset('x', data=self.data_reader.x_test)
-        h5f.create_dataset('y_true', data=np.argmax(self.data_reader.y_test, axis=-1))
-        h5f.create_dataset('y_pred', data=np.reshape(y_pred, (-1, 72)))
-        h5f.close()
-
-        # import matplotlib.pyplot as plt
-        #
-        # imgs_num = [100, 200, 300, 400, 500]
-        #
-        # plt.imshow(self.data_reader.x_test[img_num].reshape(28, 28), cmap='gray')
-        # plt.show()
-        # plt.figure()
-        # plt.imshow(img_recon[img_num].reshape(28, 28), cmap='gray')
-        # plt.show()
 
     def get_features(self, step_num):
         self.sess.run(tf.local_variables_initializer())

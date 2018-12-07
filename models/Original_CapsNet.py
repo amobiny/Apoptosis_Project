@@ -1,8 +1,8 @@
-from base_model import BaseModel
-from capsule_layers.FC_Caps import FCCapsuleLayer
+from models.base_model import BaseModel
+from models.capsule_layers.FC_Caps import FCCapsuleLayer
 # from keras import layers
 import tensorflow as tf
-from capsule_layers.ops import squash
+from models.capsule_layers.ops import squash
 
 
 class Orig_CapsNet(BaseModel):
@@ -26,7 +26,7 @@ class Orig_CapsNet(BaseModel):
             primary_caps = tf.keras.layers.Conv2D(filters=256, kernel_size=9, strides=2, trainable=self.conf.trainable,
                                          padding='valid', activation='relu', name='primary_caps')(conv1)
             _, H, W, dim = primary_caps.get_shape()
-            num_caps = H.value * W.value * dim.value / self.conf.prim_caps_dim
+            num_caps = int(H.value * W.value * dim.value / self.conf.prim_caps_dim)
             primary_caps_reshaped = tf.keras.layers.Reshape((num_caps, self.conf.prim_caps_dim))(primary_caps)
             caps1_output = squash(primary_caps_reshaped)
 
@@ -53,3 +53,6 @@ class Orig_CapsNet(BaseModel):
                 self.features = self.digit_caps
             else:
                 self.features = self.output_masked
+
+            self.net_grad = primary_caps
+            self.logits = self.act
