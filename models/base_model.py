@@ -14,7 +14,8 @@ class BaseModel(object):
         self.sess = sess
         self.conf = conf
         self.summary_list = []
-        if self.conf.mode != 'train_sequence' and self.conf.mode != 'get_features' and self.conf.mode != 'test_sequence':
+        if self.conf.mode != 'train_sequence' and self.conf.mode != 'get_features' \
+                and self.conf.mode != 'test_sequence' and self.conf.mode != 'grad_cam_sequence':
             self.input_shape = [conf.batch_size, conf.height, conf.width, conf.channel]
             self.output_shape = [self.conf.batch_size, self.conf.num_cls]
             self.global_step = tf.get_variable('global_step', [], initializer=tf.constant_initializer(0),

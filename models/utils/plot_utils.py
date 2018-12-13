@@ -10,8 +10,14 @@ def visualize(images, conv_outputs, conv_grads, gb_vizs, probs, labels, img_size
 
     num_imgs = images.shape[0]
     fig, axes = plt.subplots(nrows=4, ncols=num_imgs)
-    plt.subplots_adjust(left=0.1, bottom=0.15, right=0.9, top=0.9, wspace=0.3, hspace=None)
+    plt.subplots_adjust(left=0.1, bottom=0.15, right=0.9, top=0.9, wspace=0.1, hspace=None)
     for ii, image, conv_output, conv_grad, gb_viz in zip(range(num_imgs), images, conv_outputs, conv_grads, gb_vizs):
+
+        img_size = 51
+        image = resize(image, (img_size, img_size, 1))
+        gb_viz = resize(gb_viz, (img_size, img_size, 1))
+
+
         output = conv_output  # [7,7,512]
         grads_val = conv_grad  # [7,7,512]
 
@@ -47,7 +53,7 @@ def visualize(images, conv_outputs, conv_grads, gb_vizs, probs, labels, img_size
 
         ax = axes[2, ii]
         ax.imshow(img, cmap='gray')
-        ax.imshow(cam_heatmap, alpha=0.5)
+        ax.imshow(cam_heatmap, alpha=0.4)
         ax.axis('off')
         if ii == 0:
             ax.set_ylabel('Grad-CAM overlay')
@@ -63,7 +69,7 @@ def visualize(images, conv_outputs, conv_grads, gb_vizs, probs, labels, img_size
             ax.set_ylabel('guided Grad-CAM')
 
     FULL_NAME = os.path.join(args.imgdir+args.run_name, fig_name)
-    width = 20
-    height = width / 2
+    width = 2 * num_imgs
+    height = 8
     fig.set_size_inches(width, height)
     fig.savefig(FULL_NAME + '.png')

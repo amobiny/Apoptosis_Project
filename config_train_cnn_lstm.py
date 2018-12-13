@@ -3,9 +3,9 @@ import tensorflow as tf
 # reload_step: alexnet: 33749, resnet: 123749, original_capsule: 1583999, vector_capsule: 2964599
 
 flags = tf.app.flags
-flags.DEFINE_string('mode', 'test_sequence', 'train, train_sequence, test, test_sequence or get_features')
-flags.DEFINE_integer('reload_step', 21599, 'model number to load (either for testing or continue training)')
-flags.DEFINE_string('run_name', 'alexnet_1', 'Run name')
+flags.DEFINE_string('mode', 'grad_cam_sequence', 'train, train_sequence, test, test_sequence or get_features')
+flags.DEFINE_integer('reload_step', 33749, 'model number to load (either for testing or continue training)')
+flags.DEFINE_string('run_name', 'alex_28', 'Run name')
 flags.DEFINE_string('model', 'alexnet', 'alexnet, resnet, densenet, original_capsule, '
                                                  'fast_capsule, matrix_capsule or vector_capsule')
 flags.DEFINE_string('loss_type', 'cross_entropy', 'cross_entropy, spread or margin')
@@ -28,7 +28,7 @@ flags.DEFINE_float('lambda_val', 0.5, 'Down-weighting parameter for the absent c
 # For reconstruction loss
 flags.DEFINE_float('alpha', 0.0005, 'Regularization coefficient to scale down the reconstruction loss')
 # For training
-flags.DEFINE_integer('batch_size', 10, 'training batch size')
+flags.DEFINE_integer('batch_size', 1, 'training batch size')
 flags.DEFINE_float('init_lr', 1e-4, 'Initial learning rate')
 flags.DEFINE_float('lr_min', 1e-5, 'Minimum learning rate')
 
@@ -51,6 +51,7 @@ flags.DEFINE_integer('channel', 1, 'Network input channel size')
 flags.DEFINE_string('logdir', './Results/log_dir/', 'Logs directory')
 flags.DEFINE_string('modeldir', './Results/model_dir/', 'Saved models directory')
 flags.DEFINE_string('model_name', 'model', 'Model file name')
+flags.DEFINE_string('imgdir', './Results/image_dir/', 'Path to save images')
 
 # CNN architecture
 flags.DEFINE_float('dropout_rate', 0.2, 'The dropout rate, between 0 and 1. '
@@ -98,7 +99,7 @@ flags.DEFINE_boolean('before_mask', True, 'Decide to get the features before or 
 flags.DEFINE_string('rnn_run_name', 'run_cnn_bilstm_final', 'Run name')
 flags.DEFINE_string('rnn_logdir', './Results_recurrent/log_dir/', 'Logs directory')
 flags.DEFINE_string('rnn_modeldir', './Results_recurrent/model_dir/', 'Saved models directory')
-flags.DEFINE_integer('rnn_reload_step', 0, 'Reload step to continue training')
+flags.DEFINE_integer('rnn_reload_step', 38013, 'Reload step to continue training')
 flags.DEFINE_string('rnn_model_name', 'model', 'Model file name')
 args = tf.app.flags.FLAGS
 

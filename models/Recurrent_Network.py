@@ -9,6 +9,7 @@ from config import args
 from models.utils.metrics import *
 
 from models.utils.metrics import compute_sequence_accuracy
+from models.utils.plot_utils import visualize
 
 
 class RecNet(object):
@@ -83,18 +84,18 @@ class RecNet(object):
                       format(self.conf.num_layers, self.conf.num_hidden))
                 logits_temp = self.my_rnn(self.features, self.conf.num_layers, self.conf.num_hidden)
         print('*' * 20)
-        logits = tf.reshape(logits_temp, [self.conf.batch_size * self.conf.max_time, self.conf.num_cls])
-        self.y_pred_tensor = tf.argmax(logits, axis=-1, name='predictions')
-        labels = tf.reshape(self.feature_extractor.y, [self.conf.batch_size * self.conf.max_time, self.conf.num_cls])
-        loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(labels=labels,
-                                                                         logits=logits), name='loss')
+        self.logits = tf.reshape(logits_temp, [self.conf.batch_size * self.conf.max_time, self.conf.num_cls])
+        self.y_pred_tensor = tf.argmax(self.logits, axis=-1, name='predictions')
+        self.labels = tf.reshape(self.feature_extractor.y, [self.conf.batch_size * self.conf.max_time, self.conf.num_cls])
+        loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(labels=self.labels,
+                                                                         logits=self.logits), name='loss')
         self.mean_loss, self.mean_loss_op = tf.metrics.mean(loss)
 
         optimizer = tf.train.AdamOptimizer(learning_rate=0.001, name='Adam-op')
         train_vars = tf.trainable_variables()
         self.train_op = optimizer.minimize(loss, var_list=train_vars)
 
-        correct_prediction = tf.equal(self.y_pred_tensor, tf.argmax(labels, -1), name='correct_pred')
+        correct_prediction = tf.equal(self.y_pred_tensor, tf.argmax(self.labels, -1), name='correct_pred')
         accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32), name='accuracy')
         self.mean_accuracy, self.mean_accuracy_op = tf.metrics.mean(accuracy)
 
@@ -257,8 +258,39 @@ class RecNet(object):
                                          seq_lengths=self.conf.max_time,
                                          is_train=self.feature_extractor.is_training)
         return output
-from tensorflow.python.tools.inspect_checkpoint import print_tensors_in_checkpoint_file
-print_tensors_in_checkpoint_file
+
+    def grad_cam(self, cnn_step_num, rnn_step_num):
+        self.reload_cnn(cnn_step_num)
+        self.reload_rnn(rnn_step_num)
+        self.data_reader = DataLoader(self.conf)
+        self.data_reader.get_data(mode='test')
+        self.num_test_batch = self.data_reader.count_num_batch(self.conf.batch_size, mode='test')
+        self.is_train = False
+        self.prob = tf.nn.softmax(self.logits)
+        self.sess.run(tf.local_variables_initializer())
+        cost = (-1) * tf.reduce_sum(tf.multiply(self.feature_extractor.y, tf.log(self.prob)), axis=1)
+        # gradient for partial linearization. We only care about target visualization class.
+        y_c = tf.reduce_sum(tf.multiply(self.logits, self.feature_extractor.y), axis=1)   # vgg.fc8: outputs before softmax
+        # Get last convolutional layer gradient for generating gradCAM visualization
+        target_conv_layer = self.feature_extractor.net_grad   # vgg.pool5 of shape (batch_size, 7, 7, 512)
+        target_conv_layer_grad = tf.gradients(y_c, target_conv_layer)[0]
+        # Guided backpropagtion back to input layer
+        gb_grad = tf.gradients(cost, self.feature_extractor.x)[0]
+
+        for step in range(self.num_test_batch):
+            start = step * self.conf.batch_size
+            end = (step + 1) * self.conf.batch_size
+            x_test, y_test = self.data_reader.next_batch(start, end, mode='test')
+            feed_dict = {self.feature_extractor.x: x_test, self.feature_extractor.y: y_test,
+                         self.feature_extractor.is_training: False,
+                         self.in_keep_prob: 1, self.out_keep_prob: 1,
+                         self.seqLen: self.conf.max_time * np.ones(self.conf.batch_size)}
+            prob, gb_grad_value, target_conv_layer_value, target_conv_layer_grad_value = self.sess.run(
+                [self.prob, gb_grad, target_conv_layer, target_conv_layer_grad],
+                feed_dict=feed_dict)
+            visualize(x_test[::3], target_conv_layer_value[::3], target_conv_layer_grad_value[::3], gb_grad_value[::3],
+                      prob[::3], y_test[::3], img_size=self.conf.height, fig_name='img_' + str(step))
+
 
 def weight_variable(shape):
     """

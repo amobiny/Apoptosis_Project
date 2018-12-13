@@ -8,7 +8,7 @@ class AlexNet(BaseModel):
     def __init__(self, sess, conf):
         super(AlexNet, self).__init__(sess, conf)
         self.build_network(self.x)
-        if self.conf.mode != 'train_sequence' and self.conf.mode != 'test_sequence':
+        if self.conf.mode != 'train_sequence' and self.conf.mode != 'test_sequence' and self.conf.mode != 'grad_cam_sequence':
             self.configure_network()
 
     def build_network(self, x):
